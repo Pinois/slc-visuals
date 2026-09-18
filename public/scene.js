@@ -6,10 +6,13 @@
 
 // Les noms de DJ affichés à la place du logo. Un \n coupe en deux lignes.
 export const DJS = ['2MANY PHILOUS', 'SIDCUST', 'MARGAUX\nKINTSUGI', 'LEREN'];
+// La blague : « SALUT / LES / ... » tapé à la machine, jamais « copains ».
+export const SALUTS = ['copaings', 'compotes', 'cuistots', 'calins', 'cookies', 'costauds', 'campeurs', 'cyclistes', 'coureurs', 'croutons', 'citrons', 'cheums'];
 
 export const LAYERS = [
   { k: 'logo', name: 'Logo', opts: [['outline', 'Contour'], ['plein', 'Plein']], fmt: (v) => 'taille ' + v },
   { k: 'dj', name: 'Nom du DJ', opts: DJS.map((n) => [n, n.replace('\n', ' ')]), opts2: [['alterne', 'En alternance avec le logo'], ['fixe', 'Toujours le nom']], fmt: (v) => chainBars(v) + ' mes.' },
+  { k: 'salut', name: 'Salut les...', fmt: (v) => chainBars(v) + ' mes.' },
   { k: 'color', name: 'Couleur tournante', opts: [['uni', 'Une couleur'], ['arc', 'Arc-en-ciel']], fmt: (v) => colorBars(v) + ' mes./tour' },
   { k: 'resp', name: 'Respiration', opts: [['sinus', 'Sinus'], ['coeur', 'Cardiaque']] },
   { k: 'glitch', name: 'Glitch / Strobe', opts: [['rafales', 'Rafales'], ['continu', 'Continu']] },
@@ -27,6 +30,7 @@ export function defaultLayers() {
   return {
     logo: { on: true, int: 40, opt: 'outline' },
     dj: { on: false, int: 13, opt: DJS[0], opt2: 'alterne' },
+    salut: { on: false, int: 13 },
     color: { on: false, int: 50, opt: 'uni' },
     resp: { on: true, int: 55, opt: 'sinus' },
     glitch: { on: false, int: 40, opt: 'rafales' },

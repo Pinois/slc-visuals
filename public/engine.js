@@ -2,7 +2,7 @@
 // Un rendu three.js pourra remplacer ce fichier en gardant la même interface :
 //   const engine = await createEngine(canvas); engine.setScene(scene); engine.scene
 
-import { normalizeScene, chainBars, colorBars } from './scene.js';
+import { normalizeScene, chainBars, colorBars, SALUTS } from './scene.js';
 
 const GLOW = 1;          // intensité globale des halos
 const PARTICLES = 450;   // poussière de l'éclatement
@@ -204,19 +204,40 @@ export async function createEngine(canvas, { videos = [], videoBase = 'videos/',
     return g;
   }
 
-  // le nom du DJ remplace le logo : toujours, ou une période sur deux (le logo d'abord)
-  function showName() {
-    const d = scene.L.dj;
-    return d.on && (d.opt2 === 'fixe' || Math.floor(tA / (chainBars(d.int) * 4)) % 2 === 1);
+  // ce qui occupe le centre : le logo, le nom du DJ, la blague, en rotation, chacun pendant ses N mesures
+  function slot() {
+    const d = scene.L.dj, s = scene.L.salut;
+    if (d.on && d.opt2 === 'fixe') return { name: 'dj' };
+    const slots = [['logo', chainBars(d.int) * 4]];
+    if (d.on) slots.push(['dj', chainBars(d.int) * 4]);
+    if (s.on) slots.push(['salut', chainBars(s.int) * 4]);
+    if (slots.length === 1) return { name: 'logo' };
+    const total = slots.reduce((n, [, b]) => n + b, 0), cycle = Math.floor(tA / total);
+    let t = tA - cycle * total;
+    for (const [name, b] of slots) { if (t < b) return { name, t, cycle }; t -= b; }
+  }
+
+  function setFont(a, k = 1) { a.font = `italic 600 ${(FONT_PX * k).toFixed(1)}px Inter, sans-serif`; }
+
+  // « SALUT / LES / mot » tapé une lettre par double-croche, curseur qui clignote, mot tiré au sort à chaque cycle
+  function drawSalut(a, t, cycle) {
+    const word = SALUTS[Math.floor(rand(cycle * 3.1 + 5) * SALUTS.length)].toUpperCase();
+    const full = ['SALUT', 'LES', word];
+    let left = Math.floor(t / 0.25), lines = [];
+    for (const l of full) { if (left <= 0) break; lines.push(l.slice(0, left)); left -= l.length; }
+    if (!lines.length) lines.push('');
+    if (Math.floor(t * 2) % 2 === 0) lines[lines.length - 1] += '_';
+    setFont(a); a.textAlign = 'center'; a.textBaseline = 'middle'; a.letterSpacing = '0.04em';
+    const lh = FONT_PX * 1.05, y0 = 87 - (full.length - 1) * lh / 2;
+    lines.forEach((l, i) => a.fillText(l, 87, y0 + i * lh));
   }
 
   function drawName(a, name, u) {
     const lines = name.split('\n');
-    a.font = `italic 600 ${FONT_PX}px Inter, sans-serif`;
-    a.textAlign = 'center'; a.textBaseline = 'middle'; a.letterSpacing = '0.04em';
+    setFont(a); a.textAlign = 'center'; a.textBaseline = 'middle'; a.letterSpacing = '0.04em';
     const widest = Math.max(...lines.map((l) => a.measureText(l).width)), maxW = W / u * 0.9;
     const k = widest > maxW ? maxW / widest : 1; // rétrécit si le nom déborde de l'écran
-    if (k < 1) a.font = `italic 600 ${(FONT_PX * k).toFixed(1)}px Inter, sans-serif`;
+    if (k < 1) setFont(a, k);
     const lh = FONT_PX * k * 1.05, y0 = 87 - (lines.length - 1) * lh / 2;
     lines.forEach((l, i) => a.fillText(l, 87, y0 + i * lh));
   }
@@ -245,10 +266,11 @@ export async function createEngine(canvas, { videos = [], videoBase = 'videos/',
     baseT();
     const color = ink(a);
     const dust = st.burst.on && st.burst.opt === 'poussiere' && eB > 0.004;
-    if (showName()) {
+    const sl = slot();
+    if (sl.name !== 'logo') {
       a.globalAlpha = dust ? Math.max(0, 1 - eB * 1.6) : 1;
       a.fillStyle = color;
-      if (a.globalAlpha > 0.01) drawName(a, st.dj.opt, u);
+      if (a.globalAlpha > 0.01) sl.name === 'dj' ? drawName(a, st.dj.opt, u) : drawSalut(a, sl.t, sl.cycle);
       a.globalAlpha = 1;
       a.setTransform(1, 0, 0, 1, 0, 0);
       return;
