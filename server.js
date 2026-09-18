@@ -1,6 +1,8 @@
 // Sert public/ et relaie la scène en WebSocket entre l'écran et la télécommande.
 //   PORT        port d'écoute (défaut 3000)
 //   REMOTE_KEY  si défini, seuls les clients connectés avec ?key=<REMOTE_KEY> peuvent envoyer
+//   VIDEOS_URL  si défini, les vidéos viennent d'un bucket S3 public (MinIO) à cette URL
+//               au lieu de public/videos ; le bucket doit autoriser GetObject et ListBucket anonymes
 
 import { createServer } from 'node:http';
 import { readFile, readdir, stat } from 'node:fs/promises';
@@ -11,6 +13,7 @@ import { WebSocketServer } from 'ws';
 
 const PORT = process.env.PORT || 3000;
 const KEY = process.env.REMOTE_KEY || '';
+const VIDEOS_URL = (process.env.VIDEOS_URL || '').replace(/\/$/, '');
 const ROOT = fileURLToPath(new URL('./public/', import.meta.url));
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.mp4': 'video/mp4' };
 const ROUTES = { '/': '/index.html', '/remote': '/remote.html' };
@@ -18,9 +21,8 @@ const ROUTES = { '/': '/index.html', '/remote': '/remote.html' };
 const http = createServer(async (req, res) => {
   let path = decodeURIComponent(new URL(req.url, 'http://x').pathname);
   if (path === '/videos') {
-    const files = (await readdir(join(ROOT, 'videos')).catch(() => [])).filter((f) => f.endsWith('.mp4')).sort();
     res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-cache' });
-    return res.end(JSON.stringify(files));
+    return res.end(JSON.stringify(await listVideos()));
   }
   path = ROUTES[path] || path;
   const file = join(ROOT, normalize(path));
@@ -35,6 +37,18 @@ const http = createServer(async (req, res) => {
     res.writeHead(404); res.end('404');
   }
 });
+
+// { base, files } : d'où charger les vidéos et lesquelles. Bucket S3 public si VIDEOS_URL, sinon public/videos.
+async function listVideos() {
+  let files;
+  if (VIDEOS_URL) {
+    const xml = await fetch(VIDEOS_URL + '/?list-type=2').then((r) => r.text()).catch(() => '');
+    files = [...xml.matchAll(/<Key>([^<]+\.mp4)<\/Key>/g)].map((m) => decodeURIComponent(m[1].replace(/&amp;/g, '&')));
+  } else {
+    files = (await readdir(join(ROOT, 'videos')).catch(() => [])).filter((f) => f.endsWith('.mp4'));
+  }
+  return { base: VIDEOS_URL ? VIDEOS_URL + '/' : 'videos/', files: files.sort() };
+}
 
 // Les vidéos sont servies par morceaux (Range), sinon le navigateur ne peut ni chercher ni boucler proprement.
 async function streamVideo(req, res, file) {

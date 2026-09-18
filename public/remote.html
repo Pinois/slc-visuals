@@ -14,7 +14,7 @@
   import { mountControls } from './ui.js';
   import { connect } from './sync.js';
 
-  const videos = await fetch('/videos').then((r) => r.json()).catch(() => []);
+  const { files: videos } = await fetch('/videos').then((r) => r.json()).catch(() => ({ files: [] }));
   const send = connect({
     onScene: (s) => controls.refresh(normalizeScene(s)),
     onStatus: (ok) => document.getElementById('dot').classList.toggle('on', ok),

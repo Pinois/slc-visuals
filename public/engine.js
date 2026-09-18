@@ -44,8 +44,9 @@ async function loadLogo() {
   return { paths: ds.map((d) => new Path2D(d)), centers, pts };
 }
 
-// videos : fichiers disponibles (pour l'enchaînement). onChange : appelé quand le moteur change la scène lui-même.
-export async function createEngine(canvas, { videos = [], onChange = () => {} } = {}) {
+// videos : fichiers disponibles (pour l'enchaînement), videoBase : où les charger.
+// onChange : appelé quand le moteur change la scène lui-même.
+export async function createEngine(canvas, { videos = [], videoBase = 'videos/', onChange = () => {} } = {}) {
   const logo = await loadLogo();
   let scene = normalizeScene(null);
   // tA compte en temps musicaux (4 temps par mesure). Les périodes ci-dessous sont en temps.
@@ -61,11 +62,11 @@ export async function createEngine(canvas, { videos = [], onChange = () => {} } 
   const ph = (per) => (((tA % per) + per) % per) / per;
 
   // vidéo de fond : un <video> muet en boucle, dessiné sous le logo en remplissant l'écran
-  const vid = Object.assign(document.createElement('video'), { muted: true, loop: true, playsInline: true, preload: 'auto' });
+  const vid = Object.assign(document.createElement('video'), { muted: true, loop: true, playsInline: true, preload: 'auto', crossOrigin: 'anonymous' });
   let vidFile = '';
   function syncVideo(s) {
     const v = s.L.video, file = v.on ? v.opt : '';
-    if (file !== vidFile) { vidFile = file; vid.src = file ? 'videos/' + encodeURIComponent(file) : ''; }
+    if (file !== vidFile) { vidFile = file; vid.src = file ? videoBase + encodeURIComponent(file) : ''; }
     if (file && !s.paused) vid.play().catch(() => {}); else vid.pause();
   }
   // avec l'enchaînement, chaque vidéo démarre à un endroit au hasard

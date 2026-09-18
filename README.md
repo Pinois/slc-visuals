@@ -26,7 +26,7 @@ sans toucher au BPM, utile quand ça dérive après quelques minutes.
 ## Vidéos de fond
 
 Des fichiers mp4 dans `public/videos/`. Ils ne sont pas dans le dépôt (trop lourds) : le
-laptop est la source, et le serveur reçoit une copie. La couche « Vidéo de fond »
+laptop est la source, et en ligne elles sont dans un bucket MinIO (voir Déployer). La couche « Vidéo de fond »
 les liste, règle leur opacité, et choisit si le disque du logo reste opaque ou laisse voir
 la vidéo. Le glitch et le scan s'appliquent à la vidéo, les autres effets restent sur le logo.
 
@@ -54,13 +54,28 @@ entre 5 et 50 Mo selon la vidéo.
 
 Application Docker à partir du dépôt, le `Dockerfile` est à la racine. Port 3000.
 
-Les vidéos vivent dans un volume persistant monté sur `/app/public/videos` (Storages
-dans Coolify). Pour envoyer les vidéos du laptop vers le serveur, avec le chemin du volume
-que Coolify affiche :
+Les vidéos vivent dans un bucket MinIO public. Le serveur lit la liste du bucket, le
+navigateur charge les vidéos directement depuis MinIO.
+
+1. Crée le bucket `slc-visuals` dans la console MinIO.
+2. Access Policy du bucket, en « custom », pour autoriser la lecture et le listing anonymes :
+
+```json
+{ "Version": "2012-10-17", "Statement": [
+  { "Effect": "Allow", "Principal": { "AWS": ["*"] }, "Action": ["s3:GetBucketLocation", "s3:ListBucket"], "Resource": ["arn:aws:s3:::slc-visuals"] },
+  { "Effect": "Allow", "Principal": { "AWS": ["*"] }, "Action": ["s3:GetObject"], "Resource": ["arn:aws:s3:::slc-visuals/*"] }
+] }
+```
+
+3. Sur le laptop, une fois `rclone config` fait (type s3, provider Minio, endpoint
+   `https://storage.pnwa.dev`, une clé d'accès créée dans la console) :
 
 ```
-rsync -avz --delete public/videos/ <utilisateur>@<serveur>:<chemin-du-volume>/
+rclone sync public/videos/ minio:slc-visuals/ --include "*.mp4" --progress
 ```
+
+À refaire après chaque ajout. Pas besoin de redéployer, le serveur relit le bucket à
+chaque demande de liste.
 
 Variables :
 
@@ -68,6 +83,7 @@ Variables :
 |---|---|
 | `PORT` | Port d'écoute, défaut 3000 |
 | `REMOTE_KEY` | Si définie, seule l'URL `/remote?key=<valeur>` peut piloter l'écran |
+| `VIDEOS_URL` | URL du bucket, `https://storage.pnwa.dev/slc-visuals`. Absente, le serveur sert `public/videos/` |
 
 ## Structure
 

@@ -35,8 +35,8 @@
   import { mountControls } from './ui.js';
   import { connect } from './sync.js';
 
-  const videos = await fetch('/videos').then((r) => r.json()).catch(() => []);
-  const engine = await createEngine(document.getElementById('c'), { videos, onChange: (s) => { controls.refresh(s); send(s); } });
+  const { base, files: videos } = await fetch('/videos').then((r) => r.json()).catch(() => ({ base: 'videos/', files: [] }));
+  const engine = await createEngine(document.getElementById('c'), { videos, videoBase: base, onChange: (s) => { controls.refresh(s); send(s); } });
   const send = connect({ onScene: (s) => { engine.setScene(s); controls.refresh(engine.scene); } });
   const controls = mountControls(document.getElementById('controls'), {
     scene: engine.scene, videos,
