@@ -4,8 +4,13 @@
 // bpm : tempo, les effets sont écrits en temps musicaux. sync : horodatage du dernier
 // recalage, le moteur remet sa phase à zéro (temps fort) quand il change.
 
+// Les noms de DJ affichés à la place du logo. Un \n coupe en deux lignes.
+export const DJS = ['2MANY PHILOUS', 'SIDCUST', 'MARGAUX\nKINTSUGI', 'LEREN'];
+
 export const LAYERS = [
   { k: 'logo', name: 'Logo', opts: [['outline', 'Contour'], ['plein', 'Plein']], fmt: (v) => 'taille ' + v },
+  { k: 'dj', name: 'Nom du DJ', opts: DJS.map((n) => [n, n.replace('\n', ' ')]), opts2: [['alterne', 'En alternance avec le logo'], ['fixe', 'Toujours le nom']], fmt: (v) => chainBars(v) + ' mes.' },
+  { k: 'color', name: 'Couleur tournante', opts: [['uni', 'Une couleur'], ['arc', 'Arc-en-ciel']], fmt: (v) => colorBars(v) + ' mes./tour' },
   { k: 'resp', name: 'Respiration', opts: [['sinus', 'Sinus'], ['coeur', 'Cardiaque']] },
   { k: 'glitch', name: 'Glitch / Strobe', opts: [['rafales', 'Rafales'], ['continu', 'Continu']] },
   { k: 'liqMa', name: 'Liquide' },
@@ -21,6 +26,8 @@ export const LAYERS = [
 export function defaultLayers() {
   return {
     logo: { on: true, int: 40, opt: 'outline' },
+    dj: { on: false, int: 13, opt: DJS[0], opt2: 'alterne' },
+    color: { on: false, int: 50, opt: 'uni' },
     resp: { on: true, int: 55, opt: 'sinus' },
     glitch: { on: false, int: 40, opt: 'rafales' },
     liqMa: { on: false, int: 50 },
@@ -37,8 +44,10 @@ export function defaultScene() {
   return { bpm: 120, sync: 0, paused: false, L: defaultLayers() };
 }
 
-// enchaînement : le slider donne un nombre de mesures, de 1 à 32
+// enchaînement et alternance DJ : le slider donne un nombre de mesures, de 1 à 32
 export const chainBars = (int) => Math.max(1, Math.round(int / 100 * 32));
+// couleur tournante : le slider donne la vitesse, un tour en 16 à 1 mesures
+export const colorBars = (int) => Math.max(1, Math.round((100 - int) / 100 * 16));
 
 export const BPM_MIN = 60, BPM_MAX = 180;
 export const clampBpm = (b) => Math.min(BPM_MAX, Math.max(BPM_MIN, Math.round(b)));
@@ -50,6 +59,7 @@ export function normalizeScene(s) {
   const L = defaultLayers();
   for (const k in L) if (s.L && typeof s.L[k] === 'object') L[k] = { ...L[k], ...s.L[k] };
   L.video.opt = String(L.video.opt ?? '');
+  L.dj.opt = String(L.dj.opt ?? DJS[0]);
   return {
     bpm: Number.isFinite(+s.bpm) ? clampBpm(+s.bpm) : d.bpm,
     sync: Number.isFinite(+s.sync) ? +s.sync : 0,

@@ -24,6 +24,13 @@ et l'enchaînement toutes les 4 mesures. Tout se règle depuis le panneau ou la 
 La couche « Logo » choisit le contour ou le disque plein, et sa taille. Décochée, le logo
 disparaît et il ne reste que la vidéo.
 
+La couche « Nom du DJ » affiche un nom à la place du logo, même police (Inter, embarquée)
+et même hauteur de lettres. En alternance : le logo pendant N mesures, puis le nom pendant
+N mesures. Les noms sont dans `DJS` en tête de `scene.js`, un `\n` coupe en deux lignes.
+
+La couche « Couleur tournante » colore le logo ou le nom d'une teinte qui fait le tour du
+cercle chromatique, unie ou en dégradé. Le slider règle la vitesse.
+
 ## Tempo
 
 Les effets sont écrits en temps musicaux, pas en secondes. Tape le tempo sur TAP (ou `T`

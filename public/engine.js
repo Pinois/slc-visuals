@@ -2,11 +2,14 @@
 // Un rendu three.js pourra remplacer ce fichier en gardant la même interface :
 //   const engine = await createEngine(canvas); engine.setScene(scene); engine.scene
 
-import { normalizeScene, chainBars } from './scene.js';
+import { normalizeScene, chainBars, colorBars } from './scene.js';
 
 const GLOW = 1;          // intensité globale des halos
 const PARTICLES = 450;   // poussière de l'éclatement
 const BG = '#050505', INK = '#E7E7E7', DISC = '#2B2B2B';
+const RING = 0.96;        // l'anneau du logo en contour, un peu plus serré que dans le SVG
+const CAP = 46.5;         // hauteur des lettres du logo dans le repère 174, le texte DJ s'y aligne
+const FONT_PX = CAP / 0.727; // Inter : hauteur de capitale = 0,727 em
 
 const rand = (i) => { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
 const ss = (x, a, b) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
@@ -48,6 +51,8 @@ async function loadLogo() {
 // onChange : appelé quand le moteur change la scène lui-même.
 export async function createEngine(canvas, { videos = [], videoBase = 'videos/', onChange = () => {} } = {}) {
   const logo = await loadLogo();
+  // même police que le logo pour les noms de DJ, embarquée pour marcher hors ligne
+  await new FontFace('Inter', 'url(inter-italic.woff2)', { style: 'italic', weight: '500' }).load().then((f) => document.fonts.add(f)).catch(() => {});
   let scene = normalizeScene(null);
   // tA compte en temps musicaux (4 temps par mesure). Les périodes ci-dessous sont en temps.
   let tA = 0, last = performance.now(), eB = 0;
@@ -181,6 +186,34 @@ export async function createEngine(canvas, { videos = [], videoBase = 'videos/',
     glitchPass(st);
   }
 
+  // couleur du logo et du texte : blanc cassé, ou une teinte qui tourne (unie ou en dégradé), dans le repère 174
+  function ink(a) {
+    const c = scene.L.color;
+    if (!c.on) return INK;
+    const hue = 360 * ph(colorBars(c.int) * 4);
+    if (c.opt !== 'arc') return `hsl(${hue.toFixed(0)} 85% 62%)`;
+    const g = a.createLinearGradient(0, 0, 174, 174);
+    for (let i = 0; i <= 4; i++) g.addColorStop(i / 4, `hsl(${((hue + i * 72) % 360).toFixed(0)} 85% 62%)`);
+    return g;
+  }
+
+  // le nom du DJ remplace le logo : toujours, ou une période sur deux (le logo d'abord)
+  function showName() {
+    const d = scene.L.dj;
+    return d.on && (d.opt2 === 'fixe' || Math.floor(tA / (chainBars(d.int) * 4)) % 2 === 1);
+  }
+
+  function drawName(a, name, u) {
+    const lines = name.split('\n');
+    a.font = `italic 500 ${FONT_PX}px Inter, sans-serif`;
+    a.textAlign = 'center'; a.textBaseline = 'middle'; a.letterSpacing = '0.04em';
+    const widest = Math.max(...lines.map((l) => a.measureText(l).width)), maxW = W / u * 0.9;
+    const k = widest > maxW ? maxW / widest : 1; // rétrécit si le nom déborde de l'écran
+    if (k < 1) a.font = `italic 500 ${(FONT_PX * k).toFixed(1)}px Inter, sans-serif`;
+    const lh = FONT_PX * k * 1.05, y0 = 87 - (lines.length - 1) * lh / 2;
+    lines.forEach((l, i) => a.fillText(l, 87, y0 + i * lh));
+  }
+
   function renderScene(a) {
     const st = scene.L;
     reset(a);
@@ -202,28 +235,37 @@ export async function createEngine(canvas, { videos = [], videoBase = 'videos/',
     }
     const u = R / 87 * S;
     const baseT = () => a.setTransform(u, 0, 0, u, cx - 87 * u, cy - 87 * u);
-    // disque plein, ou anneau (version contour du logo : trait de 3 sur 72, ramené au repère 174)
     baseT();
+    const color = ink(a);
+    const dust = st.burst.on && st.burst.opt === 'poussiere' && eB > 0.004;
+    if (showName()) {
+      a.globalAlpha = dust ? Math.max(0, 1 - eB * 1.6) : 1;
+      a.fillStyle = color;
+      if (a.globalAlpha > 0.01) drawName(a, st.dj.opt, u);
+      a.globalAlpha = 1;
+      a.setTransform(1, 0, 0, 1, 0, 0);
+      return;
+    }
+    // disque plein, ou anneau (version contour du logo : trait de 3 sur 72, ramené au repère 174)
     if (st.logo.opt === 'outline') {
-      a.strokeStyle = INK; a.lineWidth = 3 * 174 / 72;
-      a.beginPath(); a.arc(87, 87, 87 - a.lineWidth / 2, 0, 2 * Math.PI); a.stroke();
+      a.strokeStyle = color; a.lineWidth = 3 * 174 / 72;
+      a.beginPath(); a.arc(87, 87, 87 * RING - a.lineWidth / 2, 0, 2 * Math.PI); a.stroke();
     } else if (!(st.video.on && st.video.opt2 === 'partout' && vidFile)) {
       a.fillStyle = DISC;
       a.beginPath(); a.arc(87, 87, 87, 0, 2 * Math.PI); a.fill();
     }
     // lettres
-    const dust = st.burst.on && st.burst.opt === 'poussiere' && eB > 0.004;
     for (let i = 0; i < 3; i++) {
       baseT();
       const c = logo.centers[i];
       a.translate(c.cx, c.cy); a.scale(sL[i], sL[i]); a.translate(-c.cx, -c.cy);
       a.globalAlpha = dust ? Math.max(0, 1 - eB * 1.6) : 1;
-      a.fillStyle = INK;
+      a.fillStyle = color;
       if (a.globalAlpha > 0.01) a.fill(logo.paths[i]);
     }
     if (dust) {
       baseT();
-      a.fillStyle = INK;
+      a.fillStyle = color;
       const vis = Math.min(1, eB * 4);
       for (const pt of logo.pts) {
         const ee = Math.pow(eB, pt.exp), ang = pt.ang + pt.spin * eB * 2.5;
