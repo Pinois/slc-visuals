@@ -124,7 +124,13 @@ export async function createEngine(canvas, { videos = [], videoBase = 'videos/',
     if (chainMark < 0) { chainMark = mark; return; }
     if (mark === chainMark) return;
     chainMark = mark;
-    const file = ch.opt === 'ordre' ? pool[(pool.indexOf(vidFile) + 1) % pool.length] : nextRandom(pool, ch.opt2);
+    let file = ch.opt === 'ordre' ? pool[(pool.indexOf(vidFile) + 1) % pool.length] : nextRandom(pool, ch.opt2);
+    // pas encore en cache (réseau lent) : plutôt une vidéo déjà là, du même thème si possible, que de l'écran noir
+    if (!blobs.has(file)) {
+      const ready = pool.filter((f) => f !== vidFile && blobs.has(f));
+      const any = [...blobs.keys()].filter((f) => f !== vidFile);
+      file = ready.length ? ready[Math.floor(Math.random() * ready.length)] : any.length ? any[Math.floor(Math.random() * any.length)] : file;
+    }
     const next = structuredClone(scene); next.L.video.opt = file;
     api.setScene(next); onChange(scene);
   }
