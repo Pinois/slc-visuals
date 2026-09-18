@@ -22,7 +22,7 @@
 <body>
 <canvas id="c"></canvas>
 <div id="ui">
-  <div class="corner">SLC · VISUELS<small>F plein écran · H panneau · espace pause · 1–5 presets</small></div>
+  <div class="corner">SLC · VISUELS<small>F plein écran · H panneau · espace pause · T tap tempo · 1–5 presets</small></div>
   <div id="panel">
     <h2>COUCHES <button type="button" id="hide">masquer</button></h2>
     <div id="controls"></div>
@@ -35,10 +35,11 @@
   import { mountControls } from './ui.js';
   import { connect } from './sync.js';
 
-  const engine = await createEngine(document.getElementById('c'));
+  const videos = await fetch('/videos').then((r) => r.json()).catch(() => []);
+  const engine = await createEngine(document.getElementById('c'), { videos, onChange: (s) => { controls.refresh(s); send(s); } });
   const send = connect({ onScene: (s) => { engine.setScene(s); controls.refresh(engine.scene); } });
   const controls = mountControls(document.getElementById('controls'), {
-    scene: engine.scene,
+    scene: engine.scene, videos,
     onChange: (s) => { engine.setScene(s); send(engine.scene); },
   });
 
@@ -54,6 +55,7 @@
     const k = e.key.toLowerCase();
     if (k === 'f') goFull();
     else if (k === 'h') togglePanel();
+    else if (k === 't') controls.tap();
     else if (k === ' ') { e.preventDefault(); controls.togglePause(); }
     else if (k >= '1' && k <= '5') controls.applyPreset(+k - 1);
   });

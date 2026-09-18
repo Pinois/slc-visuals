@@ -2,7 +2,7 @@
 // Un rendu three.js pourra remplacer ce fichier en gardant la même interface :
 //   const engine = await createEngine(canvas); engine.setScene(scene); engine.scene
 
-import { normalizeScene } from './scene.js';
+import { normalizeScene, chainBars } from './scene.js';
 
 const GLOW = 1;          // intensité globale des halos
 const PARTICLES = 450;   // poussière de l'éclatement
@@ -44,18 +44,94 @@ async function loadLogo() {
   return { paths: ds.map((d) => new Path2D(d)), centers, pts };
 }
 
-export async function createEngine(canvas) {
+// videos : fichiers disponibles (pour l'enchaînement). onChange : appelé quand le moteur change la scène lui-même.
+export async function createEngine(canvas, { videos = [], onChange = () => {} } = {}) {
   const logo = await loadLogo();
   let scene = normalizeScene(null);
+  // tA compte en temps musicaux (4 temps par mesure). Les périodes ci-dessous sont en temps.
   let tA = 0, last = performance.now(), eB = 0;
+  const T = { resp: 8, coeur: 1, burst: 16, liqMa: 16, liqMi: 4, tunnel: 8, scan: 4, rafales: 32, continu: 4 };
   let W, H, cx, cy, R, cv, x;
 
-  // instants des rafales de glitch sur un cycle de 24 s
-  const bursts = []; for (let t = 1.5, k = 0; t < 22; k++) { bursts.push(t); t += 4 + rand(k * 3.7 + 11) * 4; }
+  // temps où tombent les rafales de glitch, sur un cycle de 8 mesures
+  const bursts = []; for (let t = 4, k = 0; t < T.rafales - 2; k++) { bursts.push(t); t += 4 + Math.round(rand(k * 3.7 + 11) * 4); }
   // déplacements aléatoires des 36 morceaux de l'éclatement "découpes"
   const chunkR = []; for (let i = 0; i < 36; i++) chunkR.push({ ax: (rand(i * 5.1 + 1) - 0.5) * 2, ay: (rand(i * 5.1 + 2) - 0.5) * 2, rot: (rand(i * 5.1 + 3) - 0.5) * 0.9, m: 0.4 + rand(i * 5.1 + 4) * 0.6 });
 
   const ph = (per) => (((tA % per) + per) % per) / per;
+
+  // vidéo de fond : un <video> muet en boucle, dessiné sous le logo en remplissant l'écran
+  const vid = Object.assign(document.createElement('video'), { muted: true, loop: true, playsInline: true, preload: 'auto' });
+  let vidFile = '';
+  function syncVideo(s) {
+    const v = s.L.video, file = v.on ? v.opt : '';
+    if (file !== vidFile) { vidFile = file; vid.src = file ? 'videos/' + encodeURIComponent(file) : ''; }
+    if (file && !s.paused) vid.play().catch(() => {}); else vid.pause();
+  }
+  // avec l'enchaînement, chaque vidéo démarre à un endroit au hasard
+  vid.onloadedmetadata = () => { if (scene.L.chain.on && vid.duration > 20) vid.currentTime = Math.random() * (vid.duration - 10); };
+  // enchaînement : passe à une autre vidéo sur le temps fort, toutes les N mesures
+  let chainMark = -1;
+  function chainTick() {
+    const ch = scene.L.chain;
+    if (!ch.on || !vidFile || videos.length < 2) { chainMark = -1; return; }
+    const per = chainBars(ch.int) * 4, mark = Math.floor(tA / per);
+    if (chainMark < 0) { chainMark = mark; return; }
+    if (mark === chainMark) return;
+    chainMark = mark;
+    const i = videos.indexOf(vidFile);
+    let file = videos[(i + 1) % videos.length];
+    if (ch.opt !== 'ordre') do file = videos[Math.floor(Math.random() * videos.length)]; while (file === vidFile);
+    const next = structuredClone(scene); next.L.video.opt = file;
+    api.setScene(next); onChange(scene);
+  }
+  const DUO = { 'duo-rouge': '#FF2A55', 'duo-cyan': '#22D3EE', 'duo-ambre': '#FFB020' };
+  // dessine la vidéo dans c à l'échelle s (1 = plein écran) : cadrage rempli, ou mosaïque de 2 à 8 colonnes
+  function drawVideo(c, s) {
+    const mo = scene.L.mosaic, cols = mo.on && mo.int > 0 ? 2 + Math.round(mo.int / 100 * 6) : 1;
+    const vw = vid.videoWidth, vh = vid.videoHeight;
+    if (cols === 1) {
+      const sc = Math.max(W / vw, H / vh), w = vw * sc, h = vh * sc;
+      c.drawImage(vid, (W - w) / 2 * s, (H - h) / 2 * s, w * s, h * s);
+      return;
+    }
+    const tw = W * s / cols, th = tw * vh / vw, rows = Math.ceil(H * s / th), mirror = mo.opt === 'miroir';
+    for (let r = 0; r < rows; r++) for (let col = 0; col < cols; col++) {
+      const fx = mirror && col % 2, fy = mirror && r % 2;
+      c.save();
+      c.translate(col * tw + (fx ? tw : 0), r * th + (fy ? th : 0));
+      c.scale(fx ? -1 : 1, fy ? -1 : 1);
+      c.drawImage(vid, 0, 0, tw, th);
+      c.restore();
+    }
+  }
+  // dessine la vidéo (cadrage rempli) dans V avec le filtre choisi, puis V dans f à l'opacité voulue
+  function videoPass(f, alpha) {
+    if (vid.readyState < 2 || !vid.videoWidth) return;
+    const st = scene.L.vfx, fx = st.on && st.int > 0 ? st.opt : '', k = st.int / 100;
+    const v = x.V; reset(v);
+    if (fx === 'pixel') {
+      const b = 2 + 38 * k, pw = Math.max(1, Math.round(W / b)), ph_ = Math.max(1, Math.round(H / b));
+      const p = x.P; p.setTransform(1, 0, 0, 1, 0, 0); p.clearRect(0, 0, pw, ph_);
+      drawVideo(p, 1 / b);
+      v.imageSmoothingEnabled = false;
+      v.drawImage(cv.P, 0, 0, pw, ph_, 0, 0, W, H);
+      v.imageSmoothingEnabled = true;
+    } else {
+      v.filter = {
+        nb: `grayscale(1) contrast(${(1 + 1.2 * k).toFixed(2)})`,
+        flou: `blur(${(24 * k).toFixed(1)}px)`,
+        negatif: `invert(${k.toFixed(2)})`,
+        teinte: `hue-rotate(${Math.round(360 * ph(8))}deg) saturate(${(1 + 2 * k).toFixed(2)})`,
+      }[fx] || (DUO[fx] ? 'grayscale(1)' : 'none');
+      drawVideo(v, 1);
+      v.filter = 'none';
+      if (DUO[fx]) { v.globalCompositeOperation = 'multiply'; v.globalAlpha = k; v.fillStyle = DUO[fx]; v.fillRect(0, 0, W, H); }
+    }
+    f.globalAlpha = alpha;
+    f.drawImage(cv.V, 0, 0);
+    f.globalAlpha = 1;
+  }
 
   function setup() {
     const sc = Math.min(window.devicePixelRatio || 1, 1.5);
@@ -65,7 +141,7 @@ export async function createEngine(canvas) {
     W = Math.round(w); H = Math.round(h); cx = W / 2; cy = H / 2; R = 0.3 * Math.min(W, H);
     canvas.width = W; canvas.height = H;
     cv = {}; x = { D: canvas.getContext('2d') };
-    for (const n of ['A', 'B', 'T', 'F', 'tR', 'tC']) {
+    for (const n of ['A', 'B', 'T', 'F', 'tR', 'tC', 'V', 'P']) {
       const c = document.createElement('canvas'); c.width = W; c.height = H;
       cv[n] = c; x[n] = c.getContext('2d');
     }
@@ -75,7 +151,7 @@ export async function createEngine(canvas) {
 
   function frame() {
     const st = scene.L;
-    eB = st.burst.on && st.burst.int > 0 ? envBurst(ph(10), st.burst.opt2) * (st.burst.int / 100) : 0;
+    eB = st.burst.on && st.burst.int > 0 ? envBurst(ph(T.burst), st.burst.opt2) * (st.burst.int / 100) : 0;
     // 1. géométrie : respiration, poussière
     let src = cv.A;
     renderScene(x.A);
@@ -85,6 +161,7 @@ export async function createEngine(canvas) {
     if (st.burst.on && st.burst.opt === 'decoupes' && eB > 0.004) { const dst = src === cv.A ? cv.B : cv.A; chunkPass(src, dst.getContext('2d')); src = dst; }
     // 3. composition : tunnel, trails, logo, scan
     const f = x.F; reset(f);
+    if (st.video.on && st.video.int > 0 && vidFile) videoPass(f, st.video.int / 100);
     if (st.tunnel.on && st.tunnel.int > 0) tunnelPass(f, st.tunnel.int / 100);
     if (st.echo.on && st.echo.int > 0) {
       const i = st.echo.int / 100, tc = x.T;
@@ -110,8 +187,8 @@ export async function createEngine(canvas) {
     reset(a);
     let w01 = 0, S = 1, sL = [1, 1, 1];
     if (st.resp.on && st.resp.int > 0) {
-      const i = st.resp.int / 100, p = ph(6);
-      const wf = (pp) => st.resp.opt === 'coeur' ? heart(pp) : 0.5 + 0.5 * Math.sin(2 * Math.PI * pp - Math.PI / 2);
+      const i = st.resp.int / 100, coeur = st.resp.opt === 'coeur', p = ph(coeur ? T.coeur : T.resp);
+      const wf = (pp) => coeur ? heart((pp + 0.18) % 1) : 0.5 + 0.5 * Math.sin(2 * Math.PI * pp - Math.PI / 2);
       w01 = wf(p);
       S = 1 + 0.075 * i * (w01 - 0.35);
       sL = [0, 1, 2].map((k) => 1 + 0.085 * i * (wf(((p - 0.055 * (k + 1)) % 1 + 1) % 1) - 0.35));
@@ -125,10 +202,12 @@ export async function createEngine(canvas) {
     }
     const u = R / 87 * S;
     const baseT = () => a.setTransform(u, 0, 0, u, cx - 87 * u, cy - 87 * u);
-    // disque
-    baseT();
-    a.fillStyle = DISC;
-    a.beginPath(); a.arc(87, 87, 87, 0, 2 * Math.PI); a.fill();
+    // disque, sauf si la vidéo de fond doit se voir partout
+    if (!(st.video.on && st.video.opt2 === 'partout' && vidFile)) {
+      baseT();
+      a.fillStyle = DISC;
+      a.beginPath(); a.arc(87, 87, 87, 0, 2 * Math.PI); a.fill();
+    }
     // lettres
     const dust = st.burst.on && st.burst.opt === 'poussiere' && eB > 0.004;
     for (let i = 0; i < 3; i++) {
@@ -156,7 +235,7 @@ export async function createEngine(canvas) {
   function liquidPass(src, dst, iMa, iMi) {
     reset(dst);
     const ampMa = 0.055 * R * iMa, ampMi = 0.014 * R * iMi;
-    const pMa = ph(10), pMi = ph(3), h = iMi > 0 ? 3 : 6, TP = 2 * Math.PI;
+    const pMa = ph(T.liqMa), pMi = ph(T.liqMi), h = iMi > 0 ? 3 : 6, TP = 2 * Math.PI;
     for (let y = 0; y < H; y += h) {
       let dx = 0;
       if (ampMa) dx += ampMa * Math.sin(TP * (y / H * 1.8) + TP * pMa);
@@ -181,7 +260,7 @@ export async function createEngine(canvas) {
   }
 
   function tunnelPass(f, i) {
-    const maxR = Math.hypot(W, H) / 2 * 1.05, minR = R * 0.7, p = ph(9), n = 9;
+    const maxR = Math.hypot(W, H) / 2 * 1.05, minR = R * 0.7, p = ph(T.tunnel), n = T.tunnel; // un anneau par temps
     f.strokeStyle = INK;
     for (let j = 0; j < n; j++) {
       const k = (j / n + p) % 1;
@@ -196,7 +275,7 @@ export async function createEngine(canvas) {
   }
 
   function scanPass(f, src, i) {
-    const p = ph(7), y0 = (p * 1.3 - 0.15) * H, bh = 0.055 * H;
+    const p = ph(T.scan), y0 = (p * 1.3 - 0.15) * H, bh = 0.055 * H;
     const sy = Math.max(0, y0 - bh / 2), sh = Math.min(H - sy, bh);
     if (sh > 1) {
       f.globalCompositeOperation = 'lighter';
@@ -221,11 +300,11 @@ export async function createEngine(canvas) {
     if (st.glitch.on && st.glitch.int > 0) {
       const i = st.glitch.int / 100;
       if (st.glitch.opt === 'rafales') {
-        const tt = ((tA % 24) + 24) % 24;
-        for (const t0 of bursts) { const dur = 0.32; if (tt >= t0 && tt < t0 + dur) { g = i * Math.sin(Math.PI * (tt - t0) / dur); break; } }
-        tick = Math.floor(tt * 30);
+        const tt = ph(T.rafales) * T.rafales;
+        for (const t0 of bursts) { const dur = 0.5; if (tt >= t0 && tt < t0 + dur) { g = i * Math.sin(Math.PI * (tt - t0) / dur); break; } }
+        tick = Math.floor(tt * 16);
       } else {
-        tick = Math.floor(ph(4) * 48);
+        tick = Math.floor(ph(T.continu) * T.continu * 8); // triples croches
         g = rand(tick) < 0.12 + 0.72 * i ? i * (0.35 + 0.65 * rand(tick + 3)) : 0;
       }
     }
@@ -260,20 +339,24 @@ export async function createEngine(canvas) {
   window.addEventListener('resize', setup);
   const loop = (now) => {
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
-    if (!scene.paused) tA += dt * scene.speed;
-    try { frame(); } catch (e) { console.error(e); }
+    if (!scene.paused) tA += dt * scene.bpm / 60;
+    try { chainTick(); frame(); } catch (e) { console.error(e); }
     requestAnimationFrame(loop);
   };
   requestAnimationFrame(loop);
 
   const activeKeys = (s) => Object.keys(s.L).filter((k) => s.L[k].on).join();
-  return {
+  const api = {
     get scene() { return scene; },
     setScene(s) {
       const next = normalizeScene(s);
       // changement de couches actives : on efface les trails pour ne pas garder de fantôme
       if (activeKeys(next) !== activeKeys(scene)) x.T.clearRect(0, 0, W, H);
+      // recalage : le temps fort tombe maintenant
+      if (next.sync !== scene.sync) { tA = 0; chainMark = -1; }
       scene = next;
+      syncVideo(scene);
     },
   };
+  return api;
 }

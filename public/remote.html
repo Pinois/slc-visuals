@@ -14,11 +14,12 @@
   import { mountControls } from './ui.js';
   import { connect } from './sync.js';
 
+  const videos = await fetch('/videos').then((r) => r.json()).catch(() => []);
   const send = connect({
     onScene: (s) => controls.refresh(normalizeScene(s)),
     onStatus: (ok) => document.getElementById('dot').classList.toggle('on', ok),
   });
-  const controls = mountControls(document.getElementById('controls'), { scene: defaultScene(), onChange: send });
+  const controls = mountControls(document.getElementById('controls'), { scene: defaultScene(), onChange: send, videos });
 </script>
 </body>
 </html>
