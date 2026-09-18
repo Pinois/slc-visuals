@@ -12,10 +12,10 @@ export const SALUTS = ['copaings', 'compotes', 'cuistots', 'calins', 'cookies', 
 // Les thèmes de vidéos : noms de fichiers sans .mp4. Une vidéo absente de toute liste est dans « Autres ».
 export const THEMES = {
   danse: { name: 'Danse & fitness', files: ['aerobic', 'aerobic2', 'aerobic3', 'jazzercise', 'sovietaerobic', 'prancercise', 'soultrain', 'bollywood', 'chine', 'linedance', 'rollerdisco', 'solidgold', 'eurovision', 'turkpop', 'sesame', 'muppets'] },
-  drole: { name: 'Drôle & absurde', files: ['ballmer', 'goats', 'dogdrive', 'catsynchro', 'escalier', 'fails2', 'mariage', 'mascottes', 'ralenti', 'wrestling', 'presse', 'slime', 'pageant', 'bodybuilding', 'stock2', 'stock3', 'stock4', 'stock5', 'infopub', 'teleachat', 'formation', 'forklift'] },
-  retro: { name: 'Archives & rétro', files: ['pub50', 'keaton', 'melies', 'driversed', 'duckcover', 'meteo', 'karaoke', 'rave'] },
-  abstrait: { name: 'Abstrait & psyché', files: ['encre', 'ferrofluide', 'liquidlight', 'fractale', 'milkdrop', 'flurry'] },
-  veille: { name: 'Écrans de veille', files: ['tuyaux', 'labyrinthe', 'mystify', 'starfield', 'fenetres', 'toasters', 'bezier'] },
+  drole: { name: 'Drôle & absurde', files: ['ballmer', 'goats', 'dogdrive', 'catsynchro', 'escalier', 'fails2', 'mascottes', 'ralenti', 'wrestling', 'presse', 'slime', 'pageant', 'bodybuilding', 'stock2', 'stock3', 'stock4', 'stock5', 'infopub', 'teleachat', 'formation', 'forklift'] },
+  retro: { name: 'Archives & rétro', files: ['keaton', 'driversed', 'duckcover', 'meteo', 'karaoke', 'rave'] },
+  abstrait: { name: 'Abstrait & psyché', files: ['encre', 'ferrofluide', 'liquidlight', 'milkdrop', 'flurry'] },
+  veille: { name: 'Écrans de veille', files: ['tuyaux', 'labyrinthe', 'mystify', 'fenetres', 'toasters', 'bezier'] },
   calme: { name: 'Nature & ville', files: ['meduses', 'etourneaux', 'lave', 'nuages', 'shibuya'] },
 };
 
