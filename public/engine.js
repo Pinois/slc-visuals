@@ -52,7 +52,7 @@ async function loadLogo() {
 export async function createEngine(canvas, { videos = [], videoBase = 'videos/', onChange = () => {} } = {}) {
   const logo = await loadLogo();
   // même police que le logo pour les noms de DJ, embarquée pour marcher hors ligne
-  await new FontFace('Inter', 'url(inter-italic.woff2)', { style: 'italic', weight: '500' }).load().then((f) => document.fonts.add(f)).catch(() => {});
+  await new FontFace('Inter', 'url(inter-italic.woff2)', { style: 'italic', weight: '600' }).load().then((f) => document.fonts.add(f)).catch(() => {});
   let scene = normalizeScene(null);
   // tA compte en temps musicaux (4 temps par mesure). Les périodes ci-dessous sont en temps.
   let tA = 0, last = performance.now(), eB = 0;
@@ -76,6 +76,15 @@ export async function createEngine(canvas, { videos = [], videoBase = 'videos/',
   }
   // avec l'enchaînement, chaque vidéo démarre à un endroit au hasard
   vid.onloadedmetadata = () => { if (scene.L.chain.on && vid.duration > 20) vid.currentTime = Math.random() * (vid.duration - 10); };
+  // tirage sans remise : toutes les vidéos passent une fois avant qu'une revienne
+  let bag = [];
+  function nextRandom() {
+    if (!bag.length) {
+      bag = videos.filter((f) => f !== vidFile);
+      for (let i = bag.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [bag[i], bag[j]] = [bag[j], bag[i]]; }
+    }
+    return bag.pop();
+  }
   // enchaînement : passe à une autre vidéo sur le temps fort, toutes les N mesures
   let chainMark = -1;
   function chainTick() {
@@ -85,9 +94,7 @@ export async function createEngine(canvas, { videos = [], videoBase = 'videos/',
     if (chainMark < 0) { chainMark = mark; return; }
     if (mark === chainMark) return;
     chainMark = mark;
-    const i = videos.indexOf(vidFile);
-    let file = videos[(i + 1) % videos.length];
-    if (ch.opt !== 'ordre') do file = videos[Math.floor(Math.random() * videos.length)]; while (file === vidFile);
+    const file = ch.opt === 'ordre' ? videos[(videos.indexOf(vidFile) + 1) % videos.length] : nextRandom();
     const next = structuredClone(scene); next.L.video.opt = file;
     api.setScene(next); onChange(scene);
   }
@@ -205,11 +212,11 @@ export async function createEngine(canvas, { videos = [], videoBase = 'videos/',
 
   function drawName(a, name, u) {
     const lines = name.split('\n');
-    a.font = `italic 500 ${FONT_PX}px Inter, sans-serif`;
+    a.font = `italic 600 ${FONT_PX}px Inter, sans-serif`;
     a.textAlign = 'center'; a.textBaseline = 'middle'; a.letterSpacing = '0.04em';
     const widest = Math.max(...lines.map((l) => a.measureText(l).width)), maxW = W / u * 0.9;
     const k = widest > maxW ? maxW / widest : 1; // rétrécit si le nom déborde de l'écran
-    if (k < 1) a.font = `italic 500 ${(FONT_PX * k).toFixed(1)}px Inter, sans-serif`;
+    if (k < 1) a.font = `italic 600 ${(FONT_PX * k).toFixed(1)}px Inter, sans-serif`;
     const lh = FONT_PX * k * 1.05, y0 = 87 - (lines.length - 1) * lh / 2;
     lines.forEach((l, i) => a.fillText(l, 87, y0 + i * lh));
   }
