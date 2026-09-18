@@ -55,6 +55,10 @@ drôle, rétro, abstrait, écrans de veille, nature) ou dans tout. Chaque vidéo
 un endroit aléatoire, pas au début. Les thèmes sont dans `THEMES` en tête de `scene.js` :
 une liste de noms de fichiers par thème, une vidéo hors liste tombe dans « Autres ».
 
+L'écran précharge les vidéos à venir en arrière-plan, une à la fois, dans l'ordre du tirage,
+et les garde en mémoire (800 Mo max). Le coin en haut à gauche affiche l'avancement. Avec une
+connexion lente, laisse l'écran ouvert quelques minutes avant la soirée.
+
 La couche « Mosaïque vidéo » répète la vidéo en 2 à 8 colonnes, droite ou en miroir
 (les tuiles voisines sont retournées, effet kaléidoscope). Utile pour les vidéos en petit format.
 

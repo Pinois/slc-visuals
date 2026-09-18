@@ -71,11 +71,39 @@ export async function createEngine(canvas, { videos = [], videoBase = 'videos/',
   let vidFile = '';
   function syncVideo(s) {
     const v = s.L.video, file = v.on ? v.opt : '';
-    if (file !== vidFile) { vidFile = file; vid.src = file ? videoBase + encodeURIComponent(file) : ''; }
+    if (file !== vidFile) { vidFile = file; vid.src = file ? (blobs.get(file)?.url || videoBase + encodeURIComponent(file)) : ''; }
     if (file && !s.paused) vid.play().catch(() => {}); else vid.pause();
   }
   // avec l'enchaînement, chaque vidéo démarre à un endroit au hasard
   vid.onloadedmetadata = () => { if (scene.L.chain.on && vid.duration > 20) vid.currentTime = Math.random() * (vid.duration - 10); };
+  // préchargement : les vidéos à venir sont téléchargées en avance, une à la fois, et gardées en mémoire
+  // (jusqu'à CACHE_CAP octets, les plus anciennes partent). Une vidéo en cache démarre et se cale instantanément.
+  const CACHE_CAP = 800e6;
+  const blobs = new Map(); let cacheBytes = 0, loading = '';
+  async function prefetch(file) {
+    loading = file;
+    try {
+      const b = await (await fetch(videoBase + encodeURIComponent(file))).blob();
+      for (const [k, v] of blobs) {
+        if (cacheBytes + b.size <= CACHE_CAP) break;
+        if (k === vidFile) continue;
+        URL.revokeObjectURL(v.url); cacheBytes -= v.size; blobs.delete(k);
+      }
+      blobs.set(file, { url: URL.createObjectURL(b), size: b.size }); cacheBytes += b.size;
+    } catch { /* réseau, on réessaiera */ } finally { loading = ''; }
+  }
+  // la suivante à charger : d'abord ce que le tirage va donner, puis le reste du thème
+  function upcoming() {
+    const ch = scene.L.chain, pool = themeFiles(videos, ch.opt2);
+    const order = ch.opt === 'ordre' ? pool.slice(pool.indexOf(vidFile) + 1).concat(pool) : [...bag].reverse().concat(pool);
+    return order.find((f) => f !== vidFile && !blobs.has(f));
+  }
+  setInterval(() => {
+    if (loading || !vidFile || vid.readyState < 3) return; // la lecture en cours d'abord
+    const next = upcoming();
+    if (next) prefetch(next);
+  }, 1000);
+
   // tirage sans remise dans le thème choisi : toutes les vidéos passent une fois avant qu'une revienne
   let bag = [], bagTheme = '';
   function nextRandom(pool, theme) {
@@ -393,6 +421,7 @@ export async function createEngine(canvas, { videos = [], videoBase = 'videos/',
   const activeKeys = (s) => Object.keys(s.L).filter((k) => s.L[k].on).join();
   const api = {
     get scene() { return scene; },
+    get cache() { const pool = themeFiles(videos, scene.L.chain.opt2); return { done: pool.filter((f) => blobs.has(f)).length, total: pool.length, loading }; },
     setScene(s) {
       const next = normalizeScene(s);
       // changement de couches actives : on efface les trails pour ne pas garder de fantôme

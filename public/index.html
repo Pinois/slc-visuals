@@ -22,7 +22,7 @@
 <body>
 <canvas id="c"></canvas>
 <div id="ui">
-  <div class="corner">SLC · VISUELS<small>F plein écran · H panneau · espace pause · T tap tempo</small></div>
+  <div class="corner">SLC · VISUELS<small>F plein écran · H panneau · espace pause · T tap tempo</small><small id="cache"></small></div>
   <div id="panel">
     <h2>COUCHES <button type="button" id="hide">masquer</button></h2>
     <div id="controls"></div>
@@ -62,6 +62,9 @@
     else if (k === 't') controls.tap();
     else if (k === ' ') { e.preventDefault(); controls.togglePause(); }
   });
+
+  // état du préchargement des vidéos
+  setInterval(() => { const c = engine.cache; document.getElementById('cache').textContent = `vidéos en cache : ${c.done}/${c.total}${c.loading ? ' · ' + c.loading.replace(/\.mp4$/, '') + '…' : ''}`; }, 1000);
 
   // l'interface s'efface après 4 s sans mouvement
   const ui = document.getElementById('ui');
