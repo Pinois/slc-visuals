@@ -228,15 +228,14 @@ export async function createEngine(canvas, { videos = [], videoBase = 'videos/',
     return k;
   }
 
-  // « SALUT / LES / mot » tapé une lettre par double-croche, curseur qui clignote, mot tiré au sort à chaque cycle
+  // « SALUT / LES / mot » tapé une lettre par croche (plus vite si le créneau est court), mot tiré au sort à chaque cycle
   function drawSalut(a, t, cycle, u) {
     const word = SALUTS[Math.floor(rand(cycle * 3.1 + 5) * SALUTS.length)].toUpperCase();
-    const full = ['SALUT', 'LES', word];
-    let left = Math.floor(t / 0.25), lines = [];
+    const full = ['SALUT', 'LES', word], nChars = full.join('').length;
+    const step = Math.min(0.5, chainBars(scene.L.salut.int) * 4 * 0.6 / nChars); // temps par lettre : tout est écrit à 60 % du créneau au plus tard
+    let left = Math.floor(t / step), lines = [];
     for (const l of full) { if (left <= 0) break; lines.push(l.slice(0, left)); left -= l.length; }
-    if (!lines.length) lines.push('');
-    if (Math.floor(t * 2) % 2 === 0) lines[lines.length - 1] += '_';
-    const k = fitFont(a, full.map((l) => l + '_'), u); // mesuré sur le texte complet, la taille ne bouge pas pendant la frappe
+    const k = fitFont(a, full, u); // mesuré sur le texte complet, la taille ne bouge pas pendant la frappe
     const lh = FONT_PX * k * 1.05, y0 = 87 - (full.length - 1) * lh / 2;
     lines.forEach((l, i) => a.fillText(l, 87, y0 + i * lh));
   }

@@ -29,7 +29,7 @@ et même hauteur de lettres. En alternance : le logo pendant N mesures, puis le 
 N mesures. Les noms sont dans `DJS` en tête de `scene.js`, un `\n` coupe en deux lignes.
 
 La couche « Salut les... » ajoute un troisième temps à la rotation : « SALUT », « LES », puis
-un mot tiré au sort (jamais « copains »), tapé lettre par lettre en rythme. La liste des mots
+un mot tiré au sort (jamais « copains »), tapé lettre par lettre en rythme (une croche par lettre). La liste des mots
 est dans `SALUTS` en tête de `scene.js`.
 
 La couche « Couleur tournante » colore le logo ou le nom d'une teinte qui fait le tour du
