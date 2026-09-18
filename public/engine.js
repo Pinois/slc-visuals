@@ -51,7 +51,7 @@ export async function createEngine(canvas, { videos = [], videoBase = 'videos/',
   let scene = normalizeScene(null);
   // tA compte en temps musicaux (4 temps par mesure). Les périodes ci-dessous sont en temps.
   let tA = 0, last = performance.now(), eB = 0;
-  const T = { resp: 8, coeur: 1, burst: 16, liqMa: 16, liqMi: 4, tunnel: 8, scan: 4, rafales: 32, continu: 4 };
+  const T = { resp: 8, coeur: 1, burst: 16, liqMa: 16, rafales: 32, continu: 4 };
   let W, H, cx, cy, R, cv, x;
 
   // temps où tombent les rafales de glitch, sur un cycle de 8 mesures
@@ -139,7 +139,7 @@ export async function createEngine(canvas, { videos = [], videoBase = 'videos/',
     let w = window.innerWidth * sc, h = window.innerHeight * sc;
     const mx = Math.max(w, h);
     if (mx > 1600) { const f = 1600 / mx; w *= f; h *= f; }
-    W = Math.round(w); H = Math.round(h); cx = W / 2; cy = H / 2; R = 0.3 * Math.min(W, H);
+    W = Math.round(w); H = Math.round(h); cx = W / 2; cy = H / 2;
     canvas.width = W; canvas.height = H;
     cv = {}; x = { D: canvas.getContext('2d') };
     for (const n of ['A', 'B', 'T', 'F', 'tR', 'tC', 'V', 'P']) {
@@ -152,18 +152,17 @@ export async function createEngine(canvas, { videos = [], videoBase = 'videos/',
 
   function frame() {
     const st = scene.L;
+    R = (0.1 + 0.5 * st.logo.int / 100) * Math.min(W, H); // rayon du logo, réglé par la couche Logo
     eB = st.burst.on && st.burst.int > 0 ? envBurst(ph(T.burst), st.burst.opt2) * (st.burst.int / 100) : 0;
     // 1. géométrie : respiration, poussière
     let src = cv.A;
     renderScene(x.A);
     // 2. passes raster sur la géométrie
-    const iMa = st.liqMa.on ? st.liqMa.int / 100 : 0, iMi = st.liqMi.on ? st.liqMi.int / 100 : 0;
-    if (iMa > 0 || iMi > 0) { liquidPass(src, x.B, iMa, iMi); src = cv.B; }
+    if (st.liqMa.on && st.liqMa.int > 0) { liquidPass(src, x.B, st.liqMa.int / 100); src = cv.B; }
     if (st.burst.on && st.burst.opt === 'decoupes' && eB > 0.004) { const dst = src === cv.A ? cv.B : cv.A; chunkPass(src, dst.getContext('2d')); src = dst; }
-    // 3. composition : tunnel, trails, logo, scan
+    // 3. composition : vidéo, trails, logo
     const f = x.F; reset(f);
     if (st.video.on && st.video.int > 0 && vidFile) videoPass(f, st.video.int / 100);
-    if (st.tunnel.on && st.tunnel.int > 0) tunnelPass(f, st.tunnel.int / 100);
     if (st.echo.on && st.echo.int > 0) {
       const i = st.echo.int / 100, tc = x.T;
       tc.globalCompositeOperation = 'destination-out';
@@ -178,7 +177,6 @@ export async function createEngine(canvas, { videos = [], videoBase = 'videos/',
       f.globalCompositeOperation = 'source-over'; f.globalAlpha = 1;
     }
     f.drawImage(src, 0, 0);
-    if (st.scan.on && st.scan.int > 0) scanPass(f, src, st.scan.int / 100);
     // 4. glitch, vers l'écran
     glitchPass(st);
   }
@@ -186,6 +184,7 @@ export async function createEngine(canvas, { videos = [], videoBase = 'videos/',
   function renderScene(a) {
     const st = scene.L;
     reset(a);
+    if (!st.logo.on) return;
     let w01 = 0, S = 1, sL = [1, 1, 1];
     if (st.resp.on && st.resp.int > 0) {
       const i = st.resp.int / 100, coeur = st.resp.opt === 'coeur', p = ph(coeur ? T.coeur : T.resp);
@@ -203,9 +202,12 @@ export async function createEngine(canvas, { videos = [], videoBase = 'videos/',
     }
     const u = R / 87 * S;
     const baseT = () => a.setTransform(u, 0, 0, u, cx - 87 * u, cy - 87 * u);
-    // disque, sauf si la vidéo de fond doit se voir partout
-    if (!(st.video.on && st.video.opt2 === 'partout' && vidFile)) {
-      baseT();
+    // disque plein, ou anneau (version contour du logo : trait de 3 sur 72, ramené au repère 174)
+    baseT();
+    if (st.logo.opt === 'outline') {
+      a.strokeStyle = INK; a.lineWidth = 3 * 174 / 72;
+      a.beginPath(); a.arc(87, 87, 87 - a.lineWidth / 2, 0, 2 * Math.PI); a.stroke();
+    } else if (!(st.video.on && st.video.opt2 === 'partout' && vidFile)) {
       a.fillStyle = DISC;
       a.beginPath(); a.arc(87, 87, 87, 0, 2 * Math.PI); a.fill();
     }
@@ -233,14 +235,11 @@ export async function createEngine(canvas, { videos = [], videoBase = 'videos/',
     a.setTransform(1, 0, 0, 1, 0, 0);
   }
 
-  function liquidPass(src, dst, iMa, iMi) {
+  function liquidPass(src, dst, i) {
     reset(dst);
-    const ampMa = 0.055 * R * iMa, ampMi = 0.014 * R * iMi;
-    const pMa = ph(T.liqMa), pMi = ph(T.liqMi), h = iMi > 0 ? 3 : 6, TP = 2 * Math.PI;
+    const amp = 0.055 * R * i, p = ph(T.liqMa), h = 6, TP = 2 * Math.PI;
     for (let y = 0; y < H; y += h) {
-      let dx = 0;
-      if (ampMa) dx += ampMa * Math.sin(TP * (y / H * 1.8) + TP * pMa);
-      if (ampMi) dx += ampMi * Math.sin(TP * (y / H * 16) - TP * pMi * 2);
+      const dx = amp * Math.sin(TP * (y / H * 1.8) + TP * p);
       dst.drawImage(src, 0, y, W, h, dx, y, W, h);
     }
   }
@@ -258,39 +257,6 @@ export async function createEngine(canvas, { videos = [], videoBase = 'videos/',
       dst.drawImage(src, sx, sy, sz, sz, -sz / 2, -sz / 2, sz, sz);
       dst.restore();
     }
-  }
-
-  function tunnelPass(f, i) {
-    const maxR = Math.hypot(W, H) / 2 * 1.05, minR = R * 0.7, p = ph(T.tunnel), n = T.tunnel; // un anneau par temps
-    f.strokeStyle = INK;
-    for (let j = 0; j < n; j++) {
-      const k = (j / n + p) % 1;
-      const rr = minR * Math.pow(maxR / minR, 1 - k);
-      const a = i * 0.4 * ss(k, 0, 0.15) * (1 - ss(k, 0.78, 1)) * (rr > R * 0.98 ? 1 : 0);
-      if (a < 0.005) continue;
-      f.globalAlpha = a;
-      f.lineWidth = Math.max(1, rr * 0.012);
-      f.beginPath(); f.arc(cx, cy, rr, 0, 2 * Math.PI); f.stroke();
-    }
-    f.globalAlpha = 1;
-  }
-
-  function scanPass(f, src, i) {
-    const p = ph(T.scan), y0 = (p * 1.3 - 0.15) * H, bh = 0.055 * H;
-    const sy = Math.max(0, y0 - bh / 2), sh = Math.min(H - sy, bh);
-    if (sh > 1) {
-      f.globalCompositeOperation = 'lighter';
-      f.globalAlpha = 0.5 * i;
-      f.drawImage(src, 0, sy, W, sh, 0.02 * W * i, sy, W, sh);
-      f.globalAlpha = 1;
-    }
-    const g = f.createLinearGradient(0, y0 - bh, 0, y0 + bh);
-    g.addColorStop(0, 'rgba(231,231,231,0)');
-    g.addColorStop(0.5, 'rgba(231,231,231,' + (0.45 * i * GLOW).toFixed(3) + ')');
-    g.addColorStop(1, 'rgba(231,231,231,0)');
-    f.fillStyle = g;
-    f.fillRect(0, y0 - bh, W, bh * 2);
-    f.globalCompositeOperation = 'source-over';
   }
 
   function glitchPass(st) {

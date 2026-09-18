@@ -9,12 +9,20 @@ npm install
 npm start
 ```
 
-- Écran : http://localhost:3000 (`F` plein écran, `H` panneau, espace pause, `T` tap tempo, `1` à `5` presets)
+- Écran : http://localhost:3000 (`F` plein écran, `H` panneau, espace pause, `T` tap tempo)
 - Télécommande : http://localhost:3000/remote
 
 Le téléphone et le laptop doivent être sur le même réseau. En soirée sans internet :
 partage de connexion depuis le laptop, puis ouvre `http://<ip-du-laptop>:3000/remote`
 sur le téléphone. Tout est servi en local, aucune dépendance externe.
+
+## Couches
+
+Au départ : le logo en contour qui respire à 120 bpm, une vidéo de fond au hasard à 60 %,
+et l'enchaînement toutes les 4 mesures. Tout se règle depuis le panneau ou la télécommande.
+
+La couche « Logo » choisit le contour ou le disque plein, et sa taille. Décochée, le logo
+disparaît et il ne reste que la vidéo.
 
 ## Tempo
 
@@ -28,7 +36,7 @@ sans toucher au BPM, utile quand ça dérive après quelques minutes.
 Des fichiers mp4 dans `public/videos/`. Ils ne sont pas dans le dépôt (trop lourds) : le
 laptop est la source, et en ligne elles sont dans un bucket MinIO (voir Déployer). La couche « Vidéo de fond »
 les liste, règle leur opacité, et choisit si le disque du logo reste opaque ou laisse voir
-la vidéo. Le glitch et le scan s'appliquent à la vidéo, les autres effets restent sur le logo.
+la vidéo. Le glitch s'applique aussi à la vidéo, les autres effets restent sur le logo.
 
 La couche « Enchaînement vidéo » passe à une autre vidéo sur le temps fort, toutes les N
 mesures (le slider, de 1 à 32), au hasard ou dans l'ordre. Chaque vidéo démarre alors à un
@@ -89,9 +97,9 @@ Variables :
 
 | Fichier | Rôle |
 |---|---|
-| `public/scene.js` | La scène : couches, presets, valeurs par défaut. Le contrat entre tout le reste. |
+| `public/scene.js` | La scène : couches et valeurs par défaut. Le contrat entre tout le reste. |
 | `public/engine.js` | Le rendu canvas 2D. Reçoit une scène, dessine. À remplacer par un rendu three.js le jour venu. |
-| `public/ui.js` | Les contrôles (presets, couches, vitesse, pause), partagés par l'écran et la télécommande. |
+| `public/ui.js` | Les contrôles (couches, tempo, pause), partagés par l'écran et la télécommande. |
 | `public/sync.js` | Liaison WebSocket avec reconnexion. |
 | `public/index.html` | La page écran. |
 | `public/remote.html` | La page télécommande. |

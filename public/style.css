@@ -9,7 +9,6 @@ select { background: #101010; color: #aaa; border: 1px solid #2a2a2a; border-rad
 input[type=range] { width: 100%; accent-color: var(--ink); margin: 6px 0 0; }
 input[type=checkbox] { accent-color: var(--ink); margin: 0; }
 
-.presets { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 0 10px; }
 .layer { border-top: 1px solid var(--line); padding: 10px 0; }
 .head { display: flex; align-items: center; gap: 9px; cursor: pointer; }
 .name { flex: 1; }

@@ -1,7 +1,7 @@
-// Les contrôles : presets, couches, vitesse, pause. Servent au panneau à l'écran
+// Les contrôles : couches, tempo, pause. Servent au panneau à l'écran
 // et à la télécommande. Modifient une scène et appellent onChange(scene).
 
-import { LAYERS, PRESETS, presetScene, BPM_MIN, BPM_MAX, clampBpm } from './scene.js';
+import { LAYERS, BPM_MIN, BPM_MAX, clampBpm } from './scene.js';
 
 const el = (tag, attrs = {}, ...kids) => {
   const e = document.createElement(tag);
@@ -15,9 +15,6 @@ export function mountControls(root, { scene, onChange, videos = [] }) {
   const layers = LAYERS.map((d) => d.k !== 'video' ? d : { ...d, opts: [['', 'aucune'], ...videos.map((f) => [f, f.replace(/\.mp4$/, '')])] });
   const inputs = {};
   const emit = () => onChange(scene);
-
-  const presets = el('div', { className: 'presets' },
-    ...PRESETS.map((pr) => el('button', { type: 'button', onclick: () => { scene = presetScene(pr, scene); refresh(scene); emit(); } }, pr.name)));
 
   const rows = layers.map((def) => {
     const on = el('input', { type: 'checkbox', onchange: () => { scene.L[def.k].on = on.checked; refresh(scene); emit(); } });
@@ -63,7 +60,6 @@ export function mountControls(root, { scene, onChange, videos = [] }) {
   const pause = el('button', { type: 'button', onclick: togglePause });
 
   root.append(
-    presets,
     el('div', { className: 'layers' }, ...rows),
     el('div', { className: 'foot' },
       el('label', { className: 'head' }, el('span', { className: 'name' }, 'tempo'), bpmLabel),
@@ -85,5 +81,5 @@ export function mountControls(root, { scene, onChange, videos = [] }) {
     pause.classList.toggle('active', s.paused);
   }
   refresh(scene);
-  return { refresh, togglePause, tap, applyPreset: (i) => { scene = presetScene(PRESETS[i], scene); refresh(scene); emit(); } };
+  return { refresh, togglePause, tap };
 }

@@ -22,7 +22,7 @@
 <body>
 <canvas id="c"></canvas>
 <div id="ui">
-  <div class="corner">SLC · VISUELS<small>F plein écran · H panneau · espace pause · T tap tempo · 1–5 presets</small></div>
+  <div class="corner">SLC · VISUELS<small>F plein écran · H panneau · espace pause · T tap tempo</small></div>
   <div id="panel">
     <h2>COUCHES <button type="button" id="hide">masquer</button></h2>
     <div id="controls"></div>
@@ -37,6 +37,10 @@
 
   const { base, files: videos } = await fetch('/videos').then((r) => r.json()).catch(() => ({ base: 'videos/', files: [] }));
   const engine = await createEngine(document.getElementById('c'), { videos, videoBase: base, onChange: (s) => { controls.refresh(s); send(s); } });
+  // au départ, une vidéo au hasard si la couche est active sans fichier choisi
+  if (engine.scene.L.video.on && !engine.scene.L.video.opt && videos.length) {
+    const s = engine.scene; s.L.video.opt = videos[Math.floor(Math.random() * videos.length)]; engine.setScene(s);
+  }
   const send = connect({ onScene: (s) => { engine.setScene(s); controls.refresh(engine.scene); } });
   const controls = mountControls(document.getElementById('controls'), {
     scene: engine.scene, videos,
@@ -57,7 +61,6 @@
     else if (k === 'h') togglePanel();
     else if (k === 't') controls.tap();
     else if (k === ' ') { e.preventDefault(); controls.togglePause(); }
-    else if (k >= '1' && k <= '5') controls.applyPreset(+k - 1);
   });
 
   // l'interface s'efface après 4 s sans mouvement
