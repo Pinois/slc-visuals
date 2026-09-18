@@ -1,33 +1,47 @@
 # SLC Visuels
 
-Animations du logo Salut les Copains, à projeter en soirée.
+Le logo Salut les Copains animé, à projeter en soirée, piloté depuis un téléphone.
 
 ## Lancer
 
-Ouvre la page : https://pinois.github.io/slc-visuals/
+```
+npm install
+npm start
+```
 
-Puis `F` pour le plein écran, `H` pour masquer le panneau, espace pour mettre en pause,
-`1` à `4` pour les presets.
+- Écran : http://localhost:3000 (`F` plein écran, `H` panneau, espace pause, `1` à `5` presets)
+- Télécommande : http://localhost:3000/remote
 
-## Les deux versions
+Le téléphone et le laptop doivent être sur le même réseau. En soirée sans internet :
+partage de connexion depuis le laptop, puis ouvre `http://<ip-du-laptop>:3000/remote`
+sur le téléphone. Tout est servi en local, aucune dépendance externe.
 
-| Fichier | Quoi |
+## Déployer (Coolify)
+
+Application Docker à partir du dépôt, le `Dockerfile` est à la racine. Port 3000.
+Variables :
+
+| Variable | Rôle |
 |---|---|
-| `slc-visuels-v2.dc.html` | Moteur de couches : 10 effets cumulables (respiration, glitch, liquide, éclatement, écho, kaléidoscope, scan, tunnel, morphing), presets et réglage de vitesse. C'est celle à utiliser. |
-| `slc-visuels.dc.html` | Le prototype d'origine, gardé pour référence. |
+| `PORT` | Port d'écoute, défaut 3000 |
+| `REMOTE_KEY` | Si définie, seule l'URL `/remote?key=<valeur>` peut piloter l'écran |
 
-## En local
+## Structure
 
-Les fichiers chargent React depuis unpkg, il faut donc une connexion. Sers le dossier
-par HTTP plutôt que d'ouvrir le fichier directement :
+| Fichier | Rôle |
+|---|---|
+| `public/scene.js` | La scène : couches, presets, valeurs par défaut. Le contrat entre tout le reste. |
+| `public/engine.js` | Le rendu canvas 2D. Reçoit une scène, dessine. À remplacer par un rendu three.js le jour venu. |
+| `public/ui.js` | Les contrôles (presets, couches, vitesse, pause), partagés par l'écran et la télécommande. |
+| `public/sync.js` | Liaison WebSocket avec reconnexion. |
+| `public/index.html` | La page écran. |
+| `public/remote.html` | La page télécommande. |
+| `public/logo.svg` | Le logo, source unique des tracés utilisés par le rendu. |
+| `server.js` | Sert `public/` et relaie la scène entre les clients. |
 
-```
-python3 -m http.server 8000
-```
+## Ajouter un effet
 
-Puis va sur http://localhost:8000.
+1. Une entrée dans `LAYERS` et `defaultLayers()` dans `scene.js`.
+2. Une passe dans `engine.js`, appelée depuis `frame()`.
 
-## Éditer
-
-Les `.dc.html` viennent de Claude Design. Réimporte le fichier là-bas pour modifier
-les animations, puis réexporte ici. `support.js` est le runtime, ne pas y toucher.
+Les contrôles et la télécommande se mettent à jour tout seuls.

@@ -1,0 +1,31 @@
+/* Style partagé : écran et télécommande. */
+:root { --bg: #050505; --ink: #e7e7e7; --dim: #5a5a5a; --line: #1d1d1d; --panel: rgba(8, 8, 8, 0.92); }
+html, body { margin: 0; background: var(--bg); color: var(--ink); font: 12px/1.5 ui-monospace, 'SF Mono', Menlo, monospace; letter-spacing: 0.05em; }
+* { box-sizing: border-box; }
+
+button { background: transparent; border: 1px solid #333; color: #999; border-radius: 999px; padding: 6px 12px; font: inherit; cursor: pointer; }
+button:active, button.active { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+select { background: #101010; color: #aaa; border: 1px solid #2a2a2a; border-radius: 5px; font: inherit; padding: 4px 6px; flex: 1; }
+input[type=range] { width: 100%; accent-color: var(--ink); margin: 6px 0 0; }
+input[type=checkbox] { accent-color: var(--ink); margin: 0; }
+
+.presets { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 0 10px; }
+.layer { border-top: 1px solid var(--line); padding: 10px 0; }
+.head { display: flex; align-items: center; gap: 9px; cursor: pointer; }
+.name { flex: 1; }
+.name.off { color: var(--dim); }
+.val { color: var(--dim); min-width: 34px; text-align: right; }
+.opts { display: flex; gap: 6px; margin-top: 7px; }
+.foot { border-top: 1px solid var(--line); padding: 12px 0 0; display: flex; flex-direction: column; gap: 10px; }
+.foot button { border-radius: 7px; padding: 8px 0; }
+
+/* Télécommande : gros doigts */
+.remote { padding: 16px; padding-bottom: 40px; max-width: 520px; margin: 0 auto; }
+.remote h1 { font-size: 12px; font-weight: 400; color: var(--dim); letter-spacing: 0.16em; margin: 0 0 14px; display: flex; align-items: center; gap: 8px; }
+.remote .dot { width: 8px; height: 8px; border-radius: 50%; background: #c33; }
+.remote .dot.on { background: #3c6; }
+.remote button { padding: 11px 16px; font-size: 13px; }
+.remote .layer { padding: 14px 0; font-size: 14px; }
+.remote input[type=range] { height: 32px; }
+.remote input[type=checkbox] { width: 22px; height: 22px; }
+.remote select { padding: 10px; font-size: 14px; }

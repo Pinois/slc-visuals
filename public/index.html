@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="fr">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SLC Visuels</title>
+<link rel="icon" href="logo.svg">
+<link rel="stylesheet" href="style.css">
+<style>
+  body { overflow: hidden; user-select: none; }
+  canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  #ui { position: fixed; inset: 0; pointer-events: none; transition: opacity 0.6s; }
+  #ui.idle { opacity: 0; }
+  .corner { position: absolute; top: 20px; left: 24px; color: #555; letter-spacing: 0.14em; }
+  .corner small { display: block; color: #3a3a3a; letter-spacing: 0.08em; margin-top: 4px; }
+  #panel { position: absolute; top: 16px; right: 16px; bottom: 16px; width: 296px; padding: 14px 16px; overflow-y: auto;
+           background: var(--panel); border: 1px solid var(--line); border-radius: 10px; pointer-events: auto; }
+  #panel.hidden { display: none; }
+  #panel h2 { font-size: 11px; font-weight: 400; color: #777; letter-spacing: 0.16em; margin: 0 0 10px; display: flex; justify-content: space-between; align-items: center; }
+  #show { position: absolute; top: 16px; right: 16px; pointer-events: auto; border-radius: 8px; }
+  #show.hidden { display: none; }
+</style>
+<body>
+<canvas id="c"></canvas>
+<div id="ui">
+  <div class="corner">SLC · VISUELS<small>F plein écran · H panneau · espace pause · 1–5 presets</small></div>
+  <div id="panel">
+    <h2>COUCHES <button type="button" id="hide">masquer</button></h2>
+    <div id="controls"></div>
+    <button type="button" id="full" style="width:100%;border-radius:7px;padding:8px 0;margin-top:10px">Plein écran</button>
+  </div>
+  <button type="button" id="show" class="hidden">couches</button>
+</div>
+<script type="module">
+  import { createEngine } from './engine.js';
+  import { mountControls } from './ui.js';
+  import { connect } from './sync.js';
+
+  const engine = await createEngine(document.getElementById('c'));
+  const send = connect({ onScene: (s) => { engine.setScene(s); controls.refresh(engine.scene); } });
+  const controls = mountControls(document.getElementById('controls'), {
+    scene: engine.scene,
+    onChange: (s) => { engine.setScene(s); send(engine.scene); },
+  });
+
+  const panel = document.getElementById('panel'), show = document.getElementById('show');
+  const togglePanel = () => { panel.classList.toggle('hidden'); show.classList.toggle('hidden'); };
+  const goFull = () => document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+  document.getElementById('hide').onclick = togglePanel;
+  show.onclick = togglePanel;
+  document.getElementById('full').onclick = goFull;
+
+  window.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+    const k = e.key.toLowerCase();
+    if (k === 'f') goFull();
+    else if (k === 'h') togglePanel();
+    else if (k === ' ') { e.preventDefault(); controls.togglePause(); }
+    else if (k >= '1' && k <= '5') controls.applyPreset(+k - 1);
+  });
+
+  // l'interface s'efface après 4 s sans mouvement
+  const ui = document.getElementById('ui');
+  let idle;
+  const wake = () => { ui.classList.remove('idle'); clearTimeout(idle); idle = setTimeout(() => ui.classList.add('idle'), 4000); };
+  window.addEventListener('mousemove', wake);
+  window.addEventListener('touchstart', wake);
+  wake();
+</script>
+</body>
+</html>

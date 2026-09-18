@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="fr">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#050505">
+<title>SLC Télécommande</title>
+<link rel="icon" href="logo.svg">
+<link rel="stylesheet" href="style.css">
+<body class="remote">
+<h1><span class="dot" id="dot"></span>SLC · TÉLÉCOMMANDE</h1>
+<div id="controls"></div>
+<script type="module">
+  import { defaultScene, normalizeScene } from './scene.js';
+  import { mountControls } from './ui.js';
+  import { connect } from './sync.js';
+
+  const send = connect({
+    onScene: (s) => controls.refresh(normalizeScene(s)),
+    onStatus: (ok) => document.getElementById('dot').classList.toggle('on', ok),
+  });
+  const controls = mountControls(document.getElementById('controls'), { scene: defaultScene(), onChange: send });
+</script>
+</body>
+</html>
