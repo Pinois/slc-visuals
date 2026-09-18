@@ -445,8 +445,11 @@ export async function createEngine(canvas, { videos = [], videoBase = 'videos/',
 
   setup();
   window.addEventListener('resize', setup);
+  // images par seconde, mesurées sur la dernière seconde
+  let fps = 0, frames = 0, fpsAt = performance.now();
   const loop = (now) => {
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    frames++; if (now - fpsAt >= 1000) { fps = Math.round(frames * 1000 / (now - fpsAt)); frames = 0; fpsAt = now; }
     if (!scene.paused) tA += dt * scene.bpm / 60;
     try { fadeTick(dt); chainTick(); frame(); } catch (e) { console.error(e); }
     requestAnimationFrame(loop);
@@ -457,6 +460,7 @@ export async function createEngine(canvas, { videos = [], videoBase = 'videos/',
   const api = {
     get scene() { return scene; },
     get debug() { return { file: vidFile, fade, vid: [vid.painted, vid.readyState, vid.currentTime.toFixed(2), vid.seeking], nxt: [nxt.painted, nxt.readyState, nxt.getAttribute('src') ? 'src' : '-'] }; },
+    get fps() { return fps; },
     get cache() { const pool = themeFiles(videos, scene.L.chain.opt2); return { done: pool.filter((f) => blobs.has(f)).length, total: pool.length, loading }; },
     setScene(s) {
       const next = normalizeScene(s);

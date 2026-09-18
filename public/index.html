@@ -65,7 +65,7 @@
   });
 
   // état du préchargement des vidéos
-  setInterval(() => { const c = engine.cache; document.getElementById('cache').textContent = `vidéos en cache : ${c.done}/${c.total}${c.loading ? ' · ' + c.loading.replace(/\.mp4$/, '') + '…' : ''}`; }, 1000);
+  setInterval(() => { const c = engine.cache; document.getElementById('cache').textContent = `${engine.fps} im/s · vidéos en cache : ${c.done}/${c.total}${c.loading ? ' · ' + c.loading.replace(/\.mp4$/, '') + '…' : ''}`; }, 1000);
 
   // l'interface s'efface après 4 s sans mouvement
   const ui = document.getElementById('ui');
