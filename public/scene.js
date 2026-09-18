@@ -9,6 +9,34 @@ export const DJS = ['2MANY PHILOUS', 'SIDCUST', 'MARGAUX\nKINTSUGI', 'LEREN'];
 // La blague : « SALUT / LES / ... » tapé à la machine, jamais « copains ».
 export const SALUTS = ['copaings', 'compotes', 'cuistots', 'calins', 'cookies', 'costauds', 'campeurs', 'cyclistes', 'coureurs', 'croutons', 'citrons', 'cheums'];
 
+// Les thèmes de vidéos : noms de fichiers sans .mp4. Une vidéo absente de toute liste est dans « Autres ».
+export const THEMES = {
+  danse: { name: 'Danse & fitness', files: ['aerobic', 'aerobic2', 'aerobic3', 'jazzercise', 'sovietaerobic', 'prancercise', 'soultrain', 'bollywood', 'chine', 'linedance', 'rollerdisco', 'solidgold', 'eurovision', 'turkpop', 'sesame', 'muppets'] },
+  drole: { name: 'Drôle & absurde', files: ['ballmer', 'goats', 'dogdrive', 'catsynchro', 'escalier', 'fails2', 'mariage', 'mascottes', 'ralenti', 'wrestling', 'presse', 'slime', 'pageant', 'bodybuilding', 'stock2', 'stock3', 'stock4', 'stock5', 'infopub', 'teleachat', 'formation', 'forklift'] },
+  retro: { name: 'Archives & rétro', files: ['pub50', 'keaton', 'melies', 'driversed', 'duckcover', 'meteo', 'karaoke', 'rave'] },
+  abstrait: { name: 'Abstrait & psyché', files: ['encre', 'ferrofluide', 'liquidlight', 'fractale', 'milkdrop', 'flurry'] },
+  veille: { name: 'Écrans de veille', files: ['tuyaux', 'labyrinthe', 'mystify', 'starfield', 'fenetres', 'toasters', 'bezier'] },
+  calme: { name: 'Nature & ville', files: ['meduses', 'etourneaux', 'lave', 'nuages', 'shibuya'] },
+};
+
+// Regroupe les fichiers disponibles par thème, pour le menu ; renvoie [[nom du thème, [[fichier, libellé], ...]], ...]
+export function videoGroups(files) {
+  const rest = new Set(files), groups = [];
+  for (const t of Object.values(THEMES)) {
+    const own = files.filter((f) => t.files.includes(f.replace(/\.mp4$/, '')));
+    if (own.length) { groups.push([t.name, own]); own.forEach((f) => rest.delete(f)); }
+  }
+  if (rest.size) groups.push(['Autres', [...rest]]);
+  return groups.map(([name, own]) => [name, own.map((f) => [f, f.replace(/\.mp4$/, '')])]);
+}
+
+// Les fichiers d'un thème parmi ceux disponibles ; tout si le thème est « tous » ou vide
+export function themeFiles(files, theme) {
+  const t = THEMES[theme];
+  const own = t ? files.filter((f) => t.files.includes(f.replace(/\.mp4$/, ''))) : [];
+  return own.length ? own : files;
+}
+
 export const LAYERS = [
   { k: 'logo', name: 'Logo', opts: [['outline', 'Contour'], ['plein', 'Plein']], fmt: (v) => 'taille ' + v },
   { k: 'dj', name: 'Nom du DJ', opts: DJS.map((n) => [n, n.replace('\n', ' ')]), opts2: [['alterne', 'En alternance avec le logo'], ['fixe', 'Toujours le nom']], fmt: (v) => chainBars(v) + ' mes.' },
@@ -21,7 +49,7 @@ export const LAYERS = [
   { k: 'echo', name: 'Echo / Trails' },
   // opts (la liste des fichiers) est remplie à l'exécution depuis /videos
   { k: 'video', name: 'Vidéo de fond', opts: [], opts2: [['autour', 'Autour du disque'], ['partout', 'Partout']] },
-  { k: 'chain', name: 'Enchaînement vidéo', opts: [['aleatoire', 'Aléatoire'], ['ordre', "Dans l'ordre"]], fmt: (v) => chainBars(v) + ' mes.' },
+  { k: 'chain', name: 'Enchaînement vidéo', opts: [['aleatoire', 'Aléatoire'], ['ordre', "Dans l'ordre"]], opts2: [['tous', 'Tous les thèmes'], ...Object.entries(THEMES).map(([k, t]) => [k, t.name])], fmt: (v) => chainBars(v) + ' mes.' },
   { k: 'mosaic', name: 'Mosaïque vidéo', opts: [['normal', 'Répétée'], ['miroir', 'En miroir']] },
   { k: 'vfx', name: 'Filtre vidéo', opts: [['nb', 'Noir et blanc'], ['duo-rouge', 'Duotone rouge'], ['duo-cyan', 'Duotone cyan'], ['duo-ambre', 'Duotone ambre'], ['pixel', 'Pixels'], ['flou', 'Flou'], ['negatif', 'Négatif'], ['teinte', 'Teinte tournante']] },
 ];
@@ -38,7 +66,7 @@ export function defaultLayers() {
     burst: { on: false, int: 60, opt: 'poussiere', opt2: 'brutal' },
     echo: { on: false, int: 40 },
     video: { on: true, int: 60, opt: '', opt2: 'autour' },
-    chain: { on: true, int: 13, opt: 'aleatoire' },
+    chain: { on: true, int: 13, opt: 'aleatoire', opt2: 'tous' },
     mosaic: { on: false, int: 40, opt: 'miroir' },
     vfx: { on: false, int: 60, opt: 'nb' },
   };

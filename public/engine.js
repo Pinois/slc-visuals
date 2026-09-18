@@ -2,7 +2,7 @@
 // Un rendu three.js pourra remplacer ce fichier en gardant la même interface :
 //   const engine = await createEngine(canvas); engine.setScene(scene); engine.scene
 
-import { normalizeScene, chainBars, colorBars, SALUTS } from './scene.js';
+import { normalizeScene, chainBars, colorBars, SALUTS, themeFiles } from './scene.js';
 
 const GLOW = 1;          // intensité globale des halos
 const PARTICLES = 450;   // poussière de l'éclatement
@@ -76,11 +76,12 @@ export async function createEngine(canvas, { videos = [], videoBase = 'videos/',
   }
   // avec l'enchaînement, chaque vidéo démarre à un endroit au hasard
   vid.onloadedmetadata = () => { if (scene.L.chain.on && vid.duration > 20) vid.currentTime = Math.random() * (vid.duration - 10); };
-  // tirage sans remise : toutes les vidéos passent une fois avant qu'une revienne
-  let bag = [];
-  function nextRandom() {
+  // tirage sans remise dans le thème choisi : toutes les vidéos passent une fois avant qu'une revienne
+  let bag = [], bagTheme = '';
+  function nextRandom(pool, theme) {
+    if (theme !== bagTheme) { bag = []; bagTheme = theme; }
     if (!bag.length) {
-      bag = videos.filter((f) => f !== vidFile);
+      bag = pool.filter((f) => f !== vidFile);
       for (let i = bag.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [bag[i], bag[j]] = [bag[j], bag[i]]; }
     }
     return bag.pop();
@@ -89,12 +90,13 @@ export async function createEngine(canvas, { videos = [], videoBase = 'videos/',
   let chainMark = -1;
   function chainTick() {
     const ch = scene.L.chain;
-    if (!ch.on || !vidFile || videos.length < 2) { chainMark = -1; return; }
+    const pool = themeFiles(videos, ch.opt2);
+    if (!ch.on || !vidFile || pool.length < 2) { chainMark = -1; return; }
     const per = chainBars(ch.int) * 4, mark = Math.floor(tA / per);
     if (chainMark < 0) { chainMark = mark; return; }
     if (mark === chainMark) return;
     chainMark = mark;
-    const file = ch.opt === 'ordre' ? videos[(videos.indexOf(vidFile) + 1) % videos.length] : nextRandom();
+    const file = ch.opt === 'ordre' ? pool[(pool.indexOf(vidFile) + 1) % pool.length] : nextRandom(pool, ch.opt2);
     const next = structuredClone(scene); next.L.video.opt = file;
     api.setScene(next); onChange(scene);
   }

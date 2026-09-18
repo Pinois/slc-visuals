@@ -50,8 +50,10 @@ les liste, règle leur opacité, et choisit si le disque du logo reste opaque ou
 la vidéo. Le glitch s'applique aussi à la vidéo, les autres effets restent sur le logo.
 
 La couche « Enchaînement vidéo » passe à une autre vidéo sur le temps fort, toutes les N
-mesures (le slider, de 1 à 32), au hasard ou dans l'ordre. Chaque vidéo démarre alors à un
-endroit aléatoire, pas au début.
+mesures (le slider, de 1 à 32), au hasard ou dans l'ordre, dans le thème choisi (danse,
+drôle, rétro, abstrait, écrans de veille, nature) ou dans tout. Chaque vidéo démarre alors à
+un endroit aléatoire, pas au début. Les thèmes sont dans `THEMES` en tête de `scene.js` :
+une liste de noms de fichiers par thème, une vidéo hors liste tombe dans « Autres ».
 
 La couche « Mosaïque vidéo » répète la vidéo en 2 à 8 colonnes, droite ou en miroir
 (les tuiles voisines sont retournées, effet kaléidoscope). Utile pour les vidéos en petit format.

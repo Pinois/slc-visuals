@@ -1,7 +1,7 @@
 // Les contrôles : couches, tempo, pause. Servent au panneau à l'écran
 // et à la télécommande. Modifient une scène et appellent onChange(scene).
 
-import { LAYERS, BPM_MIN, BPM_MAX, clampBpm } from './scene.js';
+import { LAYERS, BPM_MIN, BPM_MAX, clampBpm, videoGroups } from './scene.js';
 
 const el = (tag, attrs = {}, ...kids) => {
   const e = document.createElement(tag);
@@ -12,7 +12,7 @@ const el = (tag, attrs = {}, ...kids) => {
 
 // videos : noms des fichiers disponibles dans public/videos (voir /videos côté serveur)
 export function mountControls(root, { scene, onChange, videos = [] }) {
-  const layers = LAYERS.map((d) => d.k !== 'video' ? d : { ...d, opts: [['', 'aucune'], ...videos.map((f) => [f, f.replace(/\.mp4$/, '')])] });
+  const layers = LAYERS.map((d) => d.k !== 'video' ? d : { ...d, opts: [['', 'aucune']], groups: videoGroups(videos) });
   const inputs = {};
   const emit = () => onChange(scene);
 
@@ -24,7 +24,8 @@ export function mountControls(root, { scene, onChange, videos = [] }) {
     const selects = ['opts', 'opts2'].filter((o) => def[o]).map((o) => {
       const key = o === 'opts' ? 'opt' : 'opt2';
       const sel = el('select', { onchange: () => { scene.L[def.k][key] = sel.value; emit(); } },
-        ...def[o].map(([v, l]) => el('option', { value: v }, l)));
+        ...def[o].map(([v, l]) => el('option', { value: v }, l)),
+        ...(o === 'opts' && def.groups ? def.groups.map(([g, items]) => el('optgroup', { label: g }, ...items.map(([v, l]) => el('option', { value: v }, l)))) : []));
       return [key, sel];
     });
     inputs[def.k] = { on, int, label, name, def, sel: Object.fromEntries(selects) };
