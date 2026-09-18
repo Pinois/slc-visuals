@@ -164,7 +164,7 @@ export async function createEngine(canvas, { videos = [], videoBase = 'videos/',
 
   function frame() {
     const st = scene.L;
-    R = (0.1 + 0.5 * st.logo.int / 100) * Math.min(W, H); // rayon du logo, réglé par la couche Logo
+    R = (0.183 + 0.292 * st.logo.int / 100) * Math.min(W, H); // rayon du logo, réglé par la couche Logo : 0,3 par défaut (40), 0,475 au max pour rester dans l'écran
     eB = st.burst.on && st.burst.int > 0 ? envBurst(ph(T.burst), st.burst.opt2) * (st.burst.int / 100) : 0;
     // 1. géométrie : respiration, poussière
     let src = cv.A;
@@ -219,25 +219,31 @@ export async function createEngine(canvas, { videos = [], videoBase = 'videos/',
 
   function setFont(a, k = 1) { a.font = `italic 600 ${(FONT_PX * k).toFixed(1)}px Inter, sans-serif`; }
 
+  // règle la police pour que ces lignes tiennent dans 90 % de l'écran (largeur et hauteur), renvoie le facteur
+  function fitFont(a, lines, u) {
+    setFont(a); a.textAlign = 'center'; a.textBaseline = 'middle'; a.letterSpacing = '0.04em';
+    const widest = Math.max(...lines.map((l) => a.measureText(l).width)), height = lines.length * FONT_PX * 1.05;
+    const k = Math.min(1, W / u * 0.9 / widest, H / u * 0.9 / height);
+    if (k < 1) setFont(a, k);
+    return k;
+  }
+
   // « SALUT / LES / mot » tapé une lettre par double-croche, curseur qui clignote, mot tiré au sort à chaque cycle
-  function drawSalut(a, t, cycle) {
+  function drawSalut(a, t, cycle, u) {
     const word = SALUTS[Math.floor(rand(cycle * 3.1 + 5) * SALUTS.length)].toUpperCase();
     const full = ['SALUT', 'LES', word];
     let left = Math.floor(t / 0.25), lines = [];
     for (const l of full) { if (left <= 0) break; lines.push(l.slice(0, left)); left -= l.length; }
     if (!lines.length) lines.push('');
     if (Math.floor(t * 2) % 2 === 0) lines[lines.length - 1] += '_';
-    setFont(a); a.textAlign = 'center'; a.textBaseline = 'middle'; a.letterSpacing = '0.04em';
-    const lh = FONT_PX * 1.05, y0 = 87 - (full.length - 1) * lh / 2;
+    const k = fitFont(a, full.map((l) => l + '_'), u); // mesuré sur le texte complet, la taille ne bouge pas pendant la frappe
+    const lh = FONT_PX * k * 1.05, y0 = 87 - (full.length - 1) * lh / 2;
     lines.forEach((l, i) => a.fillText(l, 87, y0 + i * lh));
   }
 
   function drawName(a, name, u) {
     const lines = name.split('\n');
-    setFont(a); a.textAlign = 'center'; a.textBaseline = 'middle'; a.letterSpacing = '0.04em';
-    const widest = Math.max(...lines.map((l) => a.measureText(l).width)), maxW = W / u * 0.9;
-    const k = widest > maxW ? maxW / widest : 1; // rétrécit si le nom déborde de l'écran
-    if (k < 1) setFont(a, k);
+    const k = fitFont(a, lines, u);
     const lh = FONT_PX * k * 1.05, y0 = 87 - (lines.length - 1) * lh / 2;
     lines.forEach((l, i) => a.fillText(l, 87, y0 + i * lh));
   }
@@ -270,7 +276,7 @@ export async function createEngine(canvas, { videos = [], videoBase = 'videos/',
     if (sl.name !== 'logo') {
       a.globalAlpha = dust ? Math.max(0, 1 - eB * 1.6) : 1;
       a.fillStyle = color;
-      if (a.globalAlpha > 0.01) sl.name === 'dj' ? drawName(a, st.dj.opt, u) : drawSalut(a, sl.t, sl.cycle);
+      if (a.globalAlpha > 0.01) sl.name === 'dj' ? drawName(a, st.dj.opt, u) : drawSalut(a, sl.t, sl.cycle, u);
       a.globalAlpha = 1;
       a.setTransform(1, 0, 0, 1, 0, 0);
       return;
