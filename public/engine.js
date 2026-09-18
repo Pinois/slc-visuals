@@ -66,16 +66,37 @@ export async function createEngine(canvas, { videos = [], videoBase = 'videos/',
 
   const ph = (per) => (((tA % per) + per) % per) / per;
 
-  // vidéo de fond : un <video> muet en boucle, dessiné sous le logo en remplissant l'écran
-  const vid = Object.assign(document.createElement('video'), { muted: true, loop: true, playsInline: true, preload: 'auto', crossOrigin: 'anonymous' });
-  let vidFile = '';
+  // vidéo de fond : deux <video> muets en boucle. vid est à l'écran, nxt charge la suivante ; quand elle a une image,
+  // fondu enchaîné de FADE secondes puis échange. La vidéo en cours ne quitte jamais l'écran avant que la suivante soit prête.
+  const FADE = 0.6;
+  const mkVid = () => {
+    const v = Object.assign(document.createElement('video'), { muted: true, loop: true, playsInline: true, preload: 'auto', crossOrigin: 'anonymous' });
+    // avec l'enchaînement, chaque vidéo démarre à un endroit au hasard
+    v.onloadedmetadata = () => { if (scene.L.chain.on && v.duration > 20) v.currentTime = Math.random() * (v.duration - 10); };
+    return v;
+  };
+  let vid = mkVid(), nxt = mkVid(), vidFile = '', fade = -1; // fade : -1 au repos, sinon avancement du fondu de 0 à 1
+  const srcOf = (file) => blobs.get(file)?.url || videoBase + encodeURIComponent(file);
+  const clear = (v) => { v.pause(); v.removeAttribute('src'); v.load(); v.painted = false; };
+  const swap = () => { [vid, nxt] = [nxt, vid]; clear(nxt); fade = -1; };
+  // un lecteur n'est bon à dessiner qu'une fois qu'il a vraiment présenté une image (readyState ne suffit pas)
+  const load = (v, file) => { v.painted = false; v.src = srcOf(file); v.requestVideoFrameCallback(() => { v.painted = true; }); };
   function syncVideo(s) {
     const v = s.L.video, file = v.on ? v.opt : '';
-    if (file !== vidFile) { vidFile = file; vid.src = file ? (blobs.get(file)?.url || videoBase + encodeURIComponent(file)) : ''; }
-    if (file && !s.paused) vid.play().catch(() => {}); else vid.pause();
+    if (file !== vidFile) {
+      vidFile = file;
+      if (!file) { clear(vid); clear(nxt); fade = -1; }
+      else if (!vid.painted) { clear(nxt); fade = -1; load(vid, file); } // rien à l'écran : directement
+      else { if (fade >= 0) swap(); load(nxt, file); }                    // la suivante charge pendant que l'actuelle joue
+    }
+    for (const e of [vid, nxt]) if (e.getAttribute('src')) { if (s.paused) e.pause(); else e.play().catch(() => {}); }
   }
-  // avec l'enchaînement, chaque vidéo démarre à un endroit au hasard
-  vid.onloadedmetadata = () => { if (scene.L.chain.on && vid.duration > 20) vid.currentTime = Math.random() * (vid.duration - 10); };
+  function fadeTick(dt) {
+    if (!nxt.getAttribute('src')) return;
+    if (fade < 0) { if (nxt.painted) fade = 0; return; }
+    fade += dt / FADE;
+    if (fade >= 1) swap();
+  }
   // préchargement : les vidéos à venir sont téléchargées en avance, une à la fois, et gardées en mémoire
   // (jusqu'à CACHE_CAP octets, les plus anciennes partent). Une vidéo en cache démarre et se cale instantanément.
   const CACHE_CAP = 800e6;
@@ -135,13 +156,19 @@ export async function createEngine(canvas, { videos = [], videoBase = 'videos/',
     api.setScene(next); onChange(scene);
   }
   const DUO = { 'duo-rouge': '#FF2A55', 'duo-cyan': '#22D3EE', 'duo-ambre': '#FFB020' };
-  // dessine la vidéo dans c à l'échelle s (1 = plein écran) : cadrage rempli, ou mosaïque de 2 à 8 colonnes
+  // dessine la vidéo en cours dans c, et la suivante par-dessus pendant le fondu
   function drawVideo(c, s) {
+    drawOne(c, s, vid);
+    if (fade >= 0 && nxt.painted) { const g = c.globalAlpha; c.globalAlpha = g * Math.min(1, fade); drawOne(c, s, nxt); c.globalAlpha = g; }
+  }
+  // dessine un lecteur dans c à l'échelle s (1 = plein écran) : cadrage rempli, ou mosaïque de 2 à 8 colonnes
+  function drawOne(c, s, el) {
     const mo = scene.L.mosaic, cols = mo.on && mo.int > 0 ? 2 + Math.round(mo.int / 100 * 6) : 1;
-    const vw = vid.videoWidth, vh = vid.videoHeight;
+    const vw = el.videoWidth, vh = el.videoHeight;
+    if (!vw) return;
     if (cols === 1) {
       const sc = Math.max(W / vw, H / vh), w = vw * sc, h = vh * sc;
-      c.drawImage(vid, (W - w) / 2 * s, (H - h) / 2 * s, w * s, h * s);
+      c.drawImage(el, (W - w) / 2 * s, (H - h) / 2 * s, w * s, h * s);
       return;
     }
     const tw = W * s / cols, th = tw * vh / vw, rows = Math.ceil(H * s / th), mirror = mo.opt === 'miroir';
@@ -150,13 +177,13 @@ export async function createEngine(canvas, { videos = [], videoBase = 'videos/',
       c.save();
       c.translate(col * tw + (fx ? tw : 0), r * th + (fy ? th : 0));
       c.scale(fx ? -1 : 1, fy ? -1 : 1);
-      c.drawImage(vid, 0, 0, tw, th);
+      c.drawImage(el, 0, 0, tw, th);
       c.restore();
     }
   }
   // dessine la vidéo (cadrage rempli) dans V avec le filtre choisi, puis V dans f à l'opacité voulue
   function videoPass(f, alpha) {
-    if (vid.readyState < 2 || !vid.videoWidth) return;
+    if (!vid.painted) return;
     const st = scene.L.vfx, fx = st.on && st.int > 0 ? st.opt : '', k = st.int / 100;
     const v = x.V; reset(v);
     if (fx === 'pixel') {
@@ -421,7 +448,7 @@ export async function createEngine(canvas, { videos = [], videoBase = 'videos/',
   const loop = (now) => {
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
     if (!scene.paused) tA += dt * scene.bpm / 60;
-    try { chainTick(); frame(); } catch (e) { console.error(e); }
+    try { fadeTick(dt); chainTick(); frame(); } catch (e) { console.error(e); }
     requestAnimationFrame(loop);
   };
   requestAnimationFrame(loop);
@@ -429,6 +456,7 @@ export async function createEngine(canvas, { videos = [], videoBase = 'videos/',
   const activeKeys = (s) => Object.keys(s.L).filter((k) => s.L[k].on).join();
   const api = {
     get scene() { return scene; },
+    get debug() { return { file: vidFile, fade, vid: [vid.painted, vid.readyState, vid.currentTime.toFixed(2), vid.seeking], nxt: [nxt.painted, nxt.readyState, nxt.getAttribute('src') ? 'src' : '-'] }; },
     get cache() { const pool = themeFiles(videos, scene.L.chain.opt2); return { done: pool.filter((f) => blobs.has(f)).length, total: pool.length, loading }; },
     setScene(s) {
       const next = normalizeScene(s);

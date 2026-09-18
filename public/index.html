@@ -41,6 +41,7 @@
   if (engine.scene.L.video.on && !engine.scene.L.video.opt && videos.length) {
     const s = engine.scene; s.L.video.opt = videos[Math.floor(Math.random() * videos.length)]; engine.setScene(s);
   }
+  window.engine = engine; // pour le débogage dans la console
   const send = connect({ onScene: (s) => { engine.setScene(s); controls.refresh(engine.scene); } });
   const controls = mountControls(document.getElementById('controls'), {
     scene: engine.scene, videos,
