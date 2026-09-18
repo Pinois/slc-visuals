@@ -264,9 +264,11 @@ export async function createEngine(canvas, { videos = [], videoBase = 'videos/',
     return k;
   }
 
-  // « SALUT / LES / mot » tapé une lettre par croche (plus vite si le créneau est court), mot tiré au sort à chaque cycle
+  // « SALUT / LES / mot » tapé une lettre par croche (plus vite si le créneau est court), les mots dans l'ordre de la liste
+  let salutIdx = -1, salutCycle = -1;
   function drawSalut(a, t, cycle, u) {
-    const word = SALUTS[Math.floor(rand(cycle * 3.1 + 5) * SALUTS.length)].toUpperCase();
+    if (cycle !== salutCycle) { salutCycle = cycle; salutIdx++; }
+    const word = SALUTS[salutIdx % SALUTS.length].toUpperCase();
     const full = ['SALUT', 'LES', word], nChars = full.join('').length;
     const step = Math.min(0.5, chainBars(scene.L.salut.int) * 4 * 0.6 / nChars); // temps par lettre : tout est écrit à 60 % du créneau au plus tard
     let left = Math.floor(t / step), lines = [];
