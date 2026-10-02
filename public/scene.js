@@ -5,7 +5,7 @@
 // recalage, le moteur remet sa phase à zéro (temps fort) quand il change.
 
 // Les noms de DJ affichés à la place du logo. Un \n coupe en deux lignes.
-export const DJS = ['2MANY PHILOUS', 'SIDCUST', 'MARGAUX\nKINTSUGI', 'LEREN'];
+export const DJS = ['MOBUDDY &\nPAMMACOTTA', '2MANY PHILOUS', 'SIDCUST', 'SASSY GIRL', 'LEREN'];
 // La blague : « SALUT / LES / ... » tapé à la machine, jamais « copains ».
 export const SALUTS = ['copaings', 'compotes', 'cuistots', 'calins', 'cookies', 'costauds', 'campeurs', 'cyclistes', 'coureurs', 'croutons', 'citrons', 'cheums'];
 
