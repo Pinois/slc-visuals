@@ -12,9 +12,20 @@ npm start
 - Écran : http://localhost:3000 (`F` plein écran, `H` panneau, espace pause, `T` tap tempo)
 - Télécommande : http://localhost:3000/remote
 
-Le téléphone et le laptop doivent être sur le même réseau. En soirée sans internet :
-partage de connexion depuis le laptop, puis ouvre `http://<ip-du-laptop>:3000/remote`
-sur le téléphone. Tout est servi en local, aucune dépendance externe.
+Ou plus simple : double-clic sur `lancer.command` dans le Finder. Il démarre le serveur,
+ouvre l'écran et affiche l'adresse à taper sur le téléphone.
+
+## En soirée, sans internet
+
+Tout est servi en local : vidéos, police, logo. Aucune dépendance externe. Il faut juste que
+le téléphone et le laptop soient sur le même réseau :
+
+- le Wi-Fi de la salle, même sans accès internet, suffit ;
+- sinon le partage de connexion du téléphone, le laptop s'y connecte, et l'adresse à taper
+  sur le téléphone est celle que `lancer.command` affiche.
+
+À tester une fois avant la soirée. Pense aussi à couper la mise en veille du laptop, et à
+`rclone sync` ou `./dl.sh` pour que `public/videos/` contienne bien tout.
 
 ## Couches
 
