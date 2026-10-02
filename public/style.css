@@ -5,6 +5,7 @@ html, body { margin: 0; background: var(--bg); color: var(--ink); font: 12px/1.5
 
 button { background: transparent; border: 1px solid #333; color: #999; border-radius: 999px; padding: 6px 12px; font: inherit; cursor: pointer; }
 button:active, button.active { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+input[type=text] { background: #101010; color: var(--ink); border: 1px solid #2a2a2a; border-radius: 5px; font: inherit; padding: 6px 8px; flex: 1; min-width: 0; }
 select { background: #101010; color: #aaa; border: 1px solid #2a2a2a; border-radius: 5px; font: inherit; padding: 4px 6px; flex: 1; }
 input[type=range] { width: 100%; accent-color: var(--ink); margin: 6px 0 0; }
 input[type=checkbox] { accent-color: var(--ink); margin: 0; }
@@ -33,4 +34,4 @@ input[type=checkbox] { accent-color: var(--ink); margin: 0; }
 .remote .layer { padding: 14px 0; font-size: 14px; }
 .remote input[type=range] { height: 32px; }
 .remote input[type=checkbox] { width: 22px; height: 22px; }
-.remote select { padding: 10px; font-size: 14px; }
+.remote select, .remote input[type=text] { padding: 10px; font-size: 16px; }

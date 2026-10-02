@@ -43,6 +43,10 @@ La couche « Salut les... » ajoute un troisième temps à la rotation : « SALU
 un mot tiré au sort (jamais « copains »), tapé lettre par lettre en rythme (une croche par lettre). La liste des mots
 est dans `SALUTS` en tête de `scene.js`.
 
+La couche « Message » affiche un texte libre à la place de tout le reste, tant qu'elle est
+cochée : un champ sur la télécommande, `|` pour passer à la ligne, Entrée pour l'activer.
+Le slider règle la taille.
+
 La couche « Couleur tournante » colore le logo ou le nom d'une teinte qui fait le tour du
 cercle chromatique, unie ou en dégradé. Le slider règle la vitesse.
 

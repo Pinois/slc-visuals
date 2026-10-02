@@ -28,10 +28,14 @@ export function mountControls(root, { scene, onChange, videos = [] }) {
         ...(o === 'opts' && def.groups ? def.groups.map(([g, items]) => el('optgroup', { label: g }, ...items.map(([v, l]) => el('option', { value: v }, l)))) : []));
       return [key, sel];
     });
-    inputs[def.k] = { on, int, label, name, def, sel: Object.fromEntries(selects) };
+    const txt = def.text ? el('input', { type: 'text', placeholder: def.text, maxLength: 200,
+      oninput: () => { scene.L[def.k].opt = txt.value; emit(); },
+      onkeydown: (e) => { if (e.key === 'Enter') { scene.L[def.k].on = true; refresh(scene); emit(); txt.blur(); } } }) : null;
+    inputs[def.k] = { on, int, label, name, def, txt, sel: Object.fromEntries(selects) };
     return el('div', { className: 'layer' },
       el('label', { className: 'head' }, on, name, label),
       int,
+      ...(txt ? [el('div', { className: 'opts' }, txt)] : []),
       ...(selects.length ? [el('div', { className: 'opts' }, ...selects.map(([, s]) => s))] : []));
   });
 
@@ -75,6 +79,7 @@ export function mountControls(root, { scene, onChange, videos = [] }) {
       i.label.textContent = def.fmt ? def.fmt(l.int) : l.int + '%';
       i.name.classList.toggle('off', !l.on);
       for (const [key, sel] of Object.entries(i.sel)) sel.value = l[key];
+      if (i.txt && document.activeElement !== i.txt) i.txt.value = l.opt; // pas pendant la frappe
     }
     bpm.value = s.bpm;
     bpmLabel.textContent = s.bpm + ' bpm';

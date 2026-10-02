@@ -269,7 +269,8 @@ export async function createEngine(canvas, { videos = [], videoBase = 'videos/',
 
   // ce qui occupe le centre : le logo, le nom du DJ, la blague, en rotation, chacun pendant ses N mesures
   function slot() {
-    const d = scene.L.dj, s = scene.L.salut;
+    const d = scene.L.dj, s = scene.L.salut, m = scene.L.msg;
+    if (m.on && m.opt.trim()) return { name: 'msg' };
     if (d.on && d.opt2 === 'fixe') return { name: 'dj' };
     const slots = [['logo', chainBars(d.int) * 4]];
     if (d.on) slots.push(['dj', chainBars(d.int) * 4]);
@@ -283,11 +284,11 @@ export async function createEngine(canvas, { videos = [], videoBase = 'videos/',
   function setFont(a, k = 1) { a.font = `italic 600 ${(FONT_PX * k).toFixed(1)}px Inter, sans-serif`; }
 
   // règle la police pour que ces lignes tiennent dans 90 % de l'écran (largeur et hauteur), renvoie le facteur
-  function fitFont(a, lines, u) {
+  function fitFont(a, lines, u, scale = 1) {
     setFont(a); a.textAlign = 'center'; a.textBaseline = 'middle'; a.letterSpacing = '0.04em';
     const widest = Math.max(...lines.map((l) => a.measureText(l).width)), height = lines.length * FONT_PX * 1.05;
-    const k = Math.min(1, W / u * 0.9 / widest, H / u * 0.9 / height);
-    if (k < 1) setFont(a, k);
+    const k = Math.min(scale, W / u * 0.9 / widest, H / u * 0.9 / height);
+    setFont(a, k);
     return k;
   }
 
@@ -305,9 +306,9 @@ export async function createEngine(canvas, { videos = [], videoBase = 'videos/',
     lines.forEach((l, i) => a.fillText(l, 87, y0 + i * lh));
   }
 
-  function drawName(a, name, u) {
+  function drawName(a, name, u, scale = 1) {
     const lines = name.split('\n');
-    const k = fitFont(a, lines, u);
+    const k = fitFont(a, lines, u, scale);
     const lh = FONT_PX * k * 1.05, y0 = 87 - (lines.length - 1) * lh / 2;
     lines.forEach((l, i) => a.fillText(l, 87, y0 + i * lh));
   }
@@ -340,7 +341,11 @@ export async function createEngine(canvas, { videos = [], videoBase = 'videos/',
     if (sl.name !== 'logo') {
       a.globalAlpha = dust ? Math.max(0, 1 - eB * 1.6) : 1;
       a.fillStyle = color;
-      if (a.globalAlpha > 0.01) sl.name === 'dj' ? drawName(a, st.dj.opt, u) : drawSalut(a, sl.t, sl.cycle, u);
+      if (a.globalAlpha > 0.01) {
+        if (sl.name === 'msg') drawName(a, st.msg.opt.trim().split('|').map((l) => l.trim()).join('\n'), u, 0.5 + st.msg.int / 100);
+        else if (sl.name === 'dj') drawName(a, st.dj.opt, u);
+        else drawSalut(a, sl.t, sl.cycle, u);
+      }
       a.globalAlpha = 1;
       a.setTransform(1, 0, 0, 1, 0, 0);
       return;

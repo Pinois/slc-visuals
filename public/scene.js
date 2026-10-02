@@ -41,6 +41,8 @@ export const LAYERS = [
   { k: 'logo', name: 'Logo', opts: [['outline', 'Contour'], ['plein', 'Plein']], fmt: (v) => 'taille ' + v },
   { k: 'dj', name: 'Nom du DJ', opts: DJS.map((n) => [n, n.replace('\n', ' ')]), opts2: [['alterne', 'En alternance avec le logo'], ['fixe', 'Toujours le nom']], fmt: (v) => chainBars(v) + ' mes.' },
   { k: 'salut', name: 'Salut les...', fmt: (v) => chainBars(v) + ' mes.' },
+  // text : un champ libre dans opt ; prend le dessus sur le logo, le DJ et la blague. Un | coupe la ligne.
+  { k: 'msg', name: 'Message', text: 'Message… ( | = retour à la ligne )', fmt: (v) => 'taille ' + v },
   { k: 'color', name: 'Couleur tournante', opts: [['uni', 'Une couleur'], ['arc', 'Arc-en-ciel']], fmt: (v) => colorBars(v) + ' mes./tour' },
   { k: 'resp', name: 'Respiration', opts: [['sinus', 'Sinus'], ['coeur', 'Cardiaque']] },
   { k: 'glitch', name: 'Glitch / Strobe', opts: [['rafales', 'Rafales'], ['continu', 'Continu']] },
@@ -59,6 +61,7 @@ export function defaultLayers() {
     logo: { on: true, int: 40, opt: 'outline' },
     dj: { on: false, int: 13, opt: DJS[0], opt2: 'alterne' },
     salut: { on: false, int: 13 },
+    msg: { on: false, int: 60, opt: '' },
     color: { on: false, int: 50, opt: 'uni' },
     resp: { on: true, int: 55, opt: 'sinus' },
     glitch: { on: false, int: 40, opt: 'rafales' },
@@ -92,6 +95,7 @@ export function normalizeScene(s) {
   for (const k in L) if (s.L && typeof s.L[k] === 'object') L[k] = { ...L[k], ...s.L[k] };
   L.video.opt = String(L.video.opt ?? '');
   L.dj.opt = String(L.dj.opt ?? DJS[0]);
+  L.msg.opt = String(L.msg.opt ?? '').slice(0, 200);
   return {
     bpm: Number.isFinite(+s.bpm) ? clampBpm(+s.bpm) : d.bpm,
     sync: Number.isFinite(+s.sync) ? +s.sync : 0,
